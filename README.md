@@ -72,6 +72,10 @@ defmodule TwitterClientTest do
 
     Bypass.up(context[:bypass])
 
+    # When testing a real client that is using i.e. https://github.com/fishcakez/connection with
+    # https://github.com/ferd/backoff to handle reconnecting, we'd have to loop for a while until
+    # the client has reconnected.
+
     assert :ok == TwitterClient.post_tweet(client, "Elixir is awesome!")
   end
 end
