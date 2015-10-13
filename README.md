@@ -14,7 +14,7 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
 
      ```elixir
      def deps do
-       [{:bypass, "~> 0.0.1"}]
+       [{:bypass, "~> 0.0.1", only: :test}]
      end
      ```
 
