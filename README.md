@@ -66,6 +66,7 @@ defmodule TwitterClientTest do
 
     assert :ok == TwitterClient.post_tweet(client, "Elixir is awesome!")
 
+    # Blocks until the TCP socket is closed.
     Bypass.down(context[:bypass])
 
     assert {:error, :noconnect} == TwitterClient.post_tweet(client, "Elixir is awesome!")
