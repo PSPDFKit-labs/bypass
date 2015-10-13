@@ -39,42 +39,42 @@ If you want to test what happens when the HTTP server goes down, use `Bypass.dow
 In this example `SomeAPIClient` reads its endpoint URL from the `Application`'s configuration:
 
 ```elixir
-defmodule MyClientTest do
+defmodule TwitterClientTest do
   use ExUnit.Case
 
   setup do
     bypass = Bypass.open
-    Application.put_env(:my_app, :some_api_endpoint, "http://localhost:#{bypass.port}/")
+    Application.put_env(:twitter_client, :endpoint, "http://localhost:#{bypass.port}/")
     context = %{bypass: bypass}
     {:ok, context}
   end
 
   test "client can handle an error response", context do
     Bypass.expect context.bypass, fn conn ->
-      assert "/no_idea" == conn.request_path
+      assert "/1.1/statuses/update.json" == conn.request_path
       assert "POST" == conn.method
-      Plug.Conn.send_resp(conn, 400, "Please make up your mind!")
+      Plug.Conn.send_resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
     end
-    {:ok, client} = SomeAPIClient.start_link()
-    assert {:error, {400, "Please make up your mind!"}} == SomeAPIClient.post_no_idea(client, "")
+    {:ok, client} = TwitterClient.start_link()
+    assert {:error, :rate_limited} == TwitterClient.post_tweet(client, "Elixir is awesome!")
   end
 
   test "client can recover from server downtime", context do
     Bypass.expect context.bypass, fn conn ->
       # We don't care about `request_path` or `method` for this test.
-      Plug.Conn.send_resp(conn, 200, "ohai")
+      Plug.Conn.send_resp(conn, 200, "")
     end
-    {:ok, client} = SomeAPIClient.start_link()
+    {:ok, client} = TwitterClient.start_link()
 
-    assert {:ok, {200, "ohai"}} == SomeAPIClient.ping(client, "")
+    assert :ok == TwitterClient.post_tweet(client, "Elixir is awesome!")
 
     Bypass.down(context[:bypass])
 
-    assert {:error, :noconnect} == SomeAPIClient.ping(client, "")
+    assert {:error, :noconnect} == TwitterClient.post_tweet(client, "Elixir is awesome!")
 
     Bypass.up(context[:bypass])
 
-    assert {:ok, {200, "ohai"}} == SomeAPIClient.ping(client, "")
+    assert :ok == TwitterClient.post_tweet(client, "Elixir is awesome!")
   end
 end
 ```
