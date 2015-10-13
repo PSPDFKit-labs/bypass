@@ -5,8 +5,8 @@ defmodule Bypass.Mixfile do
     [app: :bypass,
      version: "0.0.1",
      elixir: ">= 1.1.0-rc.0",
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
+     description: description,
+     package: package,
      deps: deps]
   end
 
@@ -19,6 +19,24 @@ defmodule Bypass.Mixfile do
     [
       {:cowboy, "~> 1.0.0"},
       {:plug, "~> 1.0.0"},
+    ]
+  end
+
+  defp description do
+    """
+    Bypass provides a quick way to create a custom plug that can be put in place instead of an
+    actual HTTP server to return prebaked responses to client requests. This is most useful in
+    tests, when you want to create a mock HTTP server and test how your HTTP client handles
+    different types of responses from the server.
+    """
+  end
+
+  defp package do
+    [
+      files: ["lib", "priv", "mix.exs", "README*", "readme*", "LICENSE*", "license*"],
+      maintainers: ["pspdfkit.com"],
+      licenses: ["Apache 2.0"],
+      links: %{"GitHub" => "https://github.com/pspdfkit-labs/bypass"}
     ]
   end
 end
