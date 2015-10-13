@@ -8,18 +8,16 @@ responses from the server.
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed as:
+Add bypass to your list of dependencies in mix.exs:
 
-  1. Add bypass to your list of dependencies in mix.exs:
+```elixir
+def deps do
+  [{:bypass, "~> 0.0.1", only: :test}]
+end
+```
 
-     ```elixir
-     def deps do
-       [{:bypass, "~> 0.0.1", only: :test}]
-     end
-     ```
-
-     It is not recommended to add `:bypass` to the list of applications in your `mix.exs`. See below
-     for usage info.
+It is not recommended to add `:bypass` to the list of applications in your `mix.exs`. See below
+for usage info.
 
 
 ## Usage
