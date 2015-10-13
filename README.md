@@ -36,7 +36,7 @@ To use Bypass in a test case, open a connection and use its port to connect your
 If you want to test what happens when the HTTP server goes down, use `Bypass.down/1` and
 `Bypass.up/1`, which guarantee that the TCP port will be closed, respective open, after returning:
 
-In this example `SomeAPIClient` reads its endpoint URL from the `Application`'s configuration:
+In this example `TwitterClient` reads its endpoint URL from the `Application`'s configuration:
 
 ```elixir
 defmodule TwitterClientTest do
