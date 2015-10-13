@@ -58,6 +58,7 @@ defmodule MyClientTest do
     {:ok, client} = SomeAPIClient.start_link()
     assert {:error, {400, "Please make up your mind!"}} == SomeAPIClient.post_no_idea(client, "")
   end
+
   test "client can recover from server downtime", context do
     Bypass.expect context.bypass, fn conn ->
       # We don't care about `request_path` or `method` for this test.
@@ -82,18 +83,3 @@ That's all you need to do. Bypass automatically sets up an `on_exit` hook to clo
 the test finishes running.
 
 Multiple concurrent Bypass instances are supported, all will have a different unique port.
-
-```elixir
-defmodule MyClientTest do
-  use ExUnit.Case
-
-  setup do
-    bypass = Bypass.open
-    Application.put_env(:my_app, :some_api_endpoint, "http://localhost:#{bypass.port}/")
-    context = %{bypass: bypass}
-    {:ok, context}
-  end
-
-end
-```
-
