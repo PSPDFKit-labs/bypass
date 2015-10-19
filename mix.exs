@@ -39,7 +39,7 @@ defmodule Bypass.Mixfile do
     [
       files: ["lib", "priv", "mix.exs", "README*", "readme*", "LICENSE*", "license*"],
       maintainers: ["pspdfkit.com"],
-      licenses: ["Apache 2.0"],
+      licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/pspdfkit-labs/bypass"}
     ]
   end
