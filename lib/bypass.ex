@@ -7,6 +7,7 @@ defmodule Bypass do
       case Bypass.Instance.call(pid, :on_exit) do
         :ok -> :ok
         {:error, :not_called} -> raise ExUnit.AssertionError, "No HTTP request arrived at Bypass"
+        {:error, :unexpected_request} -> raise ExUnit.AssertionError, "Bypass got an HTTP request but wasn't expecting one"
         {:exit, {class, reason, stacktrace}} -> :erlang.raise(class, reason, stacktrace)
       end
     end)
