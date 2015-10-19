@@ -1,8 +1,122 @@
 defmodule BypassTest do
   use ExUnit.Case
+  import ExUnit.CaptureLog
   doctest Bypass
 
-  test "the truth" do
-    assert 1 + 1 == 2
+  test "Bypass.expect's fun gets called for every single request" do
+    bypass = Bypass.open
+    parent = self()
+    Bypass.expect(bypass, fn conn ->
+      send(parent, :request_received)
+      Plug.Conn.send_resp(conn, 200, "")
+    end)
+    Enum.each(1..5, fn _ ->
+      assert {:ok, 200, ""} = request(bypass.port)
+      assert_receive :request_received
+    end)
+  end
+
+  test "Bypass.down takes down the socket" do
+    bypass = Bypass.open
+    Bypass.expect(bypass, fn conn ->
+      Plug.Conn.send_resp(conn, 200, "")
+    end)
+    assert {:ok, 200, ""} = request(bypass.port)
+
+    Bypass.down(bypass)
+    assert {:error, :noconnect} = request(bypass.port)
+  end
+
+  test "Bypass.up opens the socket again" do
+    bypass = Bypass.open
+    Bypass.expect(bypass, fn conn ->
+      Plug.Conn.send_resp(conn, 200, "")
+    end)
+    assert {:ok, 200, ""} = request(bypass.port)
+
+    Bypass.down(bypass)
+    assert {:error, :noconnect} = request(bypass.port)
+
+    Bypass.up(bypass)
+    assert {:ok, 200, ""} = request(bypass.port)
+  end
+
+  test "Bypass.expect raises if no request is made" do
+    bypass = Bypass.open
+    Bypass.expect(bypass, fn _conn ->
+      assert false
+    end)
+    # Override Bypass' on_exit handler
+    ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
+      assert {:error, :not_called} == Bypass.Instance.call(bypass.pid, :on_exit)
+    end)
+  end
+
+  test "Bypass.expect can be canceled by expecting nil" do
+    bypass = Bypass.open
+    Bypass.expect(bypass, fn _conn ->
+      assert false
+    end)
+    Bypass.expect(bypass, nil)
+  end
+
+  test "Bypass.expect can be made to pass by calling Bypass.pass" do
+    bypass = Bypass.open
+    Bypass.expect(bypass, fn _conn ->
+      Bypass.pass(bypass)
+      Process.exit(self(), :normal)
+      assert false
+    end)
+
+    capture_log fn ->
+      assert {:error, {:closed, _}} = request(bypass.port)
+    end
+  end
+
+  test "Calling a bypass without expecting a call fails the test" do
+    bypass = Bypass.open
+    capture_log fn ->
+      assert {:ok, 500, ""} = request(bypass.port)
+    end
+
+    # Override Bypass' on_exit handler
+    ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
+      assert {:error, :unexpected_request} == Bypass.Instance.call(bypass.pid, :on_exit)
+    end)
+  end
+
+  @doc ~S"""
+  Open a new HTTP connection and perform the request. We don't want to use httpc, hackney or another
+  "high-level" HTTP client, since they do connection pooling and we will sometimes get a connection
+  closed error and not a failed to connect error, when we test Bypass.down
+  """
+  def request(port, path \\ "") do
+    {:ok, conn} = :gun.start_link(self(), '127.0.0.1', port, %{retry: 0})
+    try do
+      case :gun.await_up(conn, 250) do
+        {:ok, _protocol} ->
+           stream = :gun.post(conn, path, [], "")
+           case :gun.await(conn, stream, 250) do
+             {:response, :fin, status, _headers} -> {:ok, status, ""}
+             {:response, :nofin, status, _headers} ->
+               case :gun.await_body(conn, stream, 250) do
+                 {:ok, data} -> {:ok, status, data}
+                 {:error, _} = error -> error
+               end
+             {:error, _} = error -> error
+           end
+        {:error, :timeout} -> raise "Expected gun to die, but it didn't."
+        {:error, :normal} ->
+          # `await_up` monitors gun and errors only if gun died (or after `timeout`). That happens
+          # when gun can't connect and is out of retries (immediately in our case) so we know that
+          # gun is dead.
+          {:error, :noconnect}
+      end
+    after
+      Process.unlink(conn)
+      monitor = Process.monitor(conn)
+      Process.exit(conn, :kill)
+      assert_receive {:DOWN, ^monitor, :process, ^conn, _}
+    end
   end
 end

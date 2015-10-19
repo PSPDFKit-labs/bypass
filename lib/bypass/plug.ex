@@ -1,25 +1,26 @@
 defmodule Bypass.Plug do
-  import Plug.Conn
+  def init([pid]), do: pid
 
-  @doc "Child spec for the supervisor."
-  def child_spec(ref, port, socket) do
-    Plug.Adapters.Cowboy.child_spec(:http, __MODULE__, [ref], [ref: ref, acceptors: 5, port: port, socket: socket])
-  end
-
-  def init([ref]), do: ref
-
-  def call(conn, ref) do
-    try do
-      Bypass.State.get_fun(ref).(conn)
-    else
-      conn ->
-        Bypass.State.put_result(ref, :ok)
+  def call(conn, pid) do
+    case Bypass.Instance.call(pid, :get_expect_fun) do
+      fun when is_function(fun, 1) ->
+        try do
+          fun.(conn)
+        else
+          conn ->
+            put_result(pid, :ok)
+            conn
+        catch
+          class, reason ->
+            stacktrace = System.stacktrace
+            put_result(pid, {:exit, {class, reason, stacktrace}})
+            :erlang.raise(class, reason, stacktrace)
+        end
+      nil ->
+        put_result(pid, {:error, :unexpected_request})
         conn
-    catch
-      class, reason ->
-        stacktrace = System.stacktrace
-        Bypass.State.put_result(ref, {class, reason, stacktrace})
-        :erlang.raise(class, reason, stacktrace)
     end
   end
+
+  defp put_result(pid, result), do: Bypass.Instance.call(pid, {:put_expect_result, result})
 end

@@ -17,8 +17,12 @@ defmodule Bypass.Mixfile do
 
   defp deps do
     [
-      {:cowboy, "~> 1.0.0"},
+      {:cowboy, "~> 1.0.0",},
+      {:cowlib, "~> 1.0.1", override: true},
       {:plug, "~> 1.0.0"},
+      {:ranch, "~> 1.1.0", override: true},
+    ] ++ [
+      {:gun, github: "PSPDFKit-labs/gun", only: :test},
     ]
   end
 
