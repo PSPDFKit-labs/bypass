@@ -69,7 +69,7 @@ defmodule BypassTest do
     end)
 
     capture_log fn ->
-      assert {:error, {:closed, _}} = request(bypass.port)
+      assert {:error, {:closed, 'The connection was lost.'}} = request(bypass.port)
     end
   end
 
@@ -83,6 +83,15 @@ defmodule BypassTest do
     ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
       assert {:error, :unexpected_request} == Bypass.Instance.call(bypass.pid, :on_exit)
     end)
+  end
+
+  test "closing a bypass while the request is in-flight" do
+    bypass = Bypass.open
+    Bypass.expect(bypass, fn _conn ->
+      Bypass.pass(bypass) # mark the request as arrived, since we're shutting it down now
+      Bypass.down(bypass)
+    end)
+    assert {:error, {:closed, 'The connection was lost.'}} == request(bypass.port)
   end
 
   @doc ~S"""
