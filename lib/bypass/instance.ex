@@ -93,7 +93,7 @@ defmodule Bypass.Instance do
 
     # `port_close` is synchronous, so after it has returned we _know_ that the socket has been
     # closed. If we'd rely on ranch's supervisor shutting down the acceptor processes and thereby
-    # killing the socket we would run into race conditions where the socket pot hasn't yet gotten
+    # killing the socket we would run into race conditions where the socket port hasn't yet gotten
     # the EXIT signal and would still be open, thereby breaking tests that rely on a closed socket.
     case :erlang.port_info(socket, :name) do
       :undefined -> :ok
