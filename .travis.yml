@@ -1,0 +1,15 @@
+language: elixir
+elixir:
+  - 1.1.0
+otp_release:
+  - 17.5
+  - 18.1
+sudo: false # to use faster container based build environment
+env:
+  - MIX_ENV=test
+install:
+  - mix do local.hex --force, local.rebar --force
+  - mix deps.get # need to explicitly get test deps, see mix.exs
+  - mix compile
+script:
+  - mix test

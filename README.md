@@ -1,5 +1,7 @@
 # Bypass
 
+[![Build Status](https://travis-ci.org/PSPDFKit-labs/bypass.svg?branch=master)](https://travis-ci.org/PSPDFKit-labs/bypass)
+
 Bypass provides a quick way to create a custom plug that can be put in place instead of an actual
 HTTP server to return prebaked responses to client requests. This is most useful in tests, when you
 want to create a mock HTTP server and test how your HTTP client handles different types of
