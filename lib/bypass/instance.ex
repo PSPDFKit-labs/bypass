@@ -1,6 +1,8 @@
 defmodule Bypass.Instance do
   use GenServer
 
+  require Logger
+
   def start_link do
     case GenServer.start_link(__MODULE__, [self()]) do
       {:ok, pid} ->
@@ -12,7 +14,14 @@ defmodule Bypass.Instance do
     end
   end
 
-  def call(pid, request), do: GenServer.call(pid, request, :infinity)
+  def call(pid, request) do
+    if Bypass.debug_log_enabled?,
+      do: Logger.debug "[Bypass.Instance] call(#{inspect pid}, #{inspect request})"
+    result = GenServer.call(pid, request, :infinity)
+    if Bypass.debug_log_enabled?,
+      do: Logger.debug "[Bypass.Instance] #{inspect pid} -> #{inspect result}"
+    result
+  end
 
   # GenServer callbacks
 
@@ -38,38 +47,48 @@ defmodule Bypass.Instance do
     {:ok, state}
   end
 
-  def handle_call(:up, _from, %{port: port, ref: ref, socket: nil} = state) do
+  def handle_call(request, from, state) do
+    if Bypass.debug_log_enabled? do
+      Logger.debug [
+        "[Bypass.Instance] ", inspect(self()),
+        " called ", inspect(request), " with state ", inspect(state)
+      ]
+    end
+    do_handle_call(request, from, state)
+  end
+
+  defp do_handle_call(:up, _from, %{port: port, ref: ref, socket: nil} = state) do
     socket = do_up(port, ref)
     {:reply, :ok, %{state | socket: socket}}
   end
-  def handle_call(:up, _from, state) do
+  defp do_handle_call(:up, _from, state) do
     {:reply, {:error, :already_up}, state}
   end
 
-  def handle_call(:down, _from, %{socket: nil} = state) do
+  defp do_handle_call(:down, _from, %{socket: nil} = state) do
     {:reply, {:error, :already_down}, state}
   end
-  def handle_call(:down, _from, %{socket: socket, ref: ref} = state) when not is_nil(socket) do
+  defp do_handle_call(:down, _from, %{socket: socket, ref: ref} = state) when not is_nil(socket) do
     do_down(ref, socket)
     {:reply, :ok, %{state | socket: nil}}
   end
 
-  def handle_call({:expect, nil}, _from, state) do
+  defp do_handle_call({:expect, nil}, _from, state) do
     {:reply, :ok, %{state | expect_fun: nil, request_result: :ok}}
   end
-  def handle_call({:expect, fun}, _from, state) do
+  defp do_handle_call({:expect, fun}, _from, state) do
     {:reply, :ok, %{state | expect_fun: fun, request_result: {:error, :not_called}}}
   end
 
-  def handle_call(:get_expect_fun, _from, %{expect_fun: expect_fun} = state) do
+  defp do_handle_call(:get_expect_fun, _from, %{expect_fun: expect_fun} = state) do
     {:reply, expect_fun, state}
   end
 
-  def handle_call({:put_expect_result, result}, _from, state) do
+  defp do_handle_call({:put_expect_result, result}, _from, state) do
     {:reply, :ok, %{state | request_result: result}}
   end
 
-  def handle_call(:on_exit, _from, state) do
+  defp do_handle_call(:on_exit, _from, state) do
     state = case state do
       %{socket: nil} -> state
       %{socket: socket, ref: ref} ->

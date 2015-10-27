@@ -12,7 +12,8 @@ defmodule Bypass.Mixfile do
 
   def application do
     [applications: [:logger, :ranch, :cowboy, :plug],
-     mod: {Bypass.Application, []}]
+     mod: {Bypass.Application, []},
+     env: env]
   end
 
   defp deps do
@@ -20,6 +21,10 @@ defmodule Bypass.Mixfile do
       {:cowboy, "~> 1.0.0",},
       {:plug, "~> 1.0.0"},
     ]
+  end
+
+  defp env do
+    [enable_debug_log: false]
   end
 
   # We need to work around the fact that gun would pull in cowlib/ranch from git, while cowboy/plug
