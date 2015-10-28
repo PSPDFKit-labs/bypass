@@ -14,7 +14,7 @@ Add bypass to your list of dependencies in mix.exs:
 
 ```elixir
 def deps do
-  [{:bypass, "~> 0.0.1", only: :test}]
+  [{:bypass, "~> 0.1", only: :test}]
 end
 ```
 
@@ -47,12 +47,11 @@ defmodule TwitterClientTest do
   setup do
     bypass = Bypass.open
     Application.put_env(:twitter_client, :endpoint, "http://localhost:#{bypass.port}/")
-    context = %{bypass: bypass}
-    {:ok, context}
+    {:ok, bypass: bypass}
   end
 
-  test "client can handle an error response", context do
-    Bypass.expect context.bypass, fn conn ->
+  test "client can handle an error response", %{bypass: bypass} do
+    Bypass.expect bypass, fn conn ->
       assert "/1.1/statuses/update.json" == conn.request_path
       assert "POST" == conn.method
       Plug.Conn.send_resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
@@ -61,8 +60,8 @@ defmodule TwitterClientTest do
     assert {:error, :rate_limited} == TwitterClient.post_tweet(client, "Elixir is awesome!")
   end
 
-  test "client can recover from server downtime", context do
-    Bypass.expect context.bypass, fn conn ->
+  test "client can recover from server downtime", %{bypass: bypass} do
+    Bypass.expect bypass, fn conn ->
       # We don't care about `request_path` or `method` for this test.
       Plug.Conn.send_resp(conn, 200, "")
     end
@@ -71,11 +70,11 @@ defmodule TwitterClientTest do
     assert :ok == TwitterClient.post_tweet(client, "Elixir is awesome!")
 
     # Blocks until the TCP socket is closed.
-    Bypass.down(context[:bypass])
+    Bypass.down(bypass)
 
     assert {:error, :noconnect} == TwitterClient.post_tweet(client, "Elixir is awesome!")
 
-    Bypass.up(context[:bypass])
+    Bypass.up(bypass)
 
     # When testing a real client that is using i.e. https://github.com/fishcakez/connection
     # with https://github.com/ferd/backoff to handle reconnecting, we'd have to loop for
