@@ -8,7 +8,7 @@ defmodule Bypass.Plug do
           fun.(conn)
         else
           conn ->
-            put_result(pid, :ok)
+            put_result(pid, :ok_call)
             conn
         catch
           class, reason ->

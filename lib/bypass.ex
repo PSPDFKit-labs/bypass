@@ -11,6 +11,8 @@ defmodule Bypass do
       case Bypass.Instance.call(pid, :on_exit) do
         :ok ->
           :ok
+        :ok_call ->
+          :ok
         {:error, :not_called} ->
           raise ExUnit.AssertionError, "No HTTP request arrived at Bypass"
         {:error, :unexpected_request} ->
