@@ -23,6 +23,10 @@ defmodule Bypass.Instance do
     result
   end
 
+  def cast(pid, request) do
+    GenServer.cast(pid, request)
+  end
+
   # GenServer callbacks
 
   def init([parent]) do
@@ -42,6 +46,8 @@ defmodule Bypass.Instance do
       ref: ref,
       request_result: :ok,
       socket: socket,
+      retained_plug: nil,
+      caller_awaiting_down: nil,
     }
 
     send(parent, {:bypass_port, self(), port})
@@ -59,6 +65,16 @@ defmodule Bypass.Instance do
     do_handle_call(request, from, state)
   end
 
+  def handle_cast({:retain_plug_process, caller_pid}, state) do
+    if Bypass.debug_log_enabled? do
+      Logger.debug [
+        "[Bypass.Instance] ", inspect(self()), " retain_plug_process ", inspect(caller_pid),
+        ", retained_plug: ", inspect(state.retained_plug)
+      ]
+    end
+    {:noreply, Map.update!(state, :retained_plug, fn nil -> caller_pid end)}
+  end
+
   defp do_handle_call(:up, _from, %{port: port, ref: ref, socket: nil} = state) do
     socket = do_up(port, ref)
     {:reply, :ok, %{state | socket: socket}}
@@ -70,9 +86,15 @@ defmodule Bypass.Instance do
   defp do_handle_call(:down, _from, %{socket: nil} = state) do
     {:reply, {:error, :already_down}, state}
   end
-  defp do_handle_call(:down, _from, %{socket: socket, ref: ref} = state) when not is_nil(socket) do
-    do_down(ref, socket)
-    {:reply, :ok, %{state | socket: nil}}
+  defp do_handle_call(:down, from, %{socket: socket, ref: ref} = state) when not is_nil(socket) do
+    nil = state.caller_awaiting_down  # assertion
+    if state.retained_plug != nil do
+      # wait for the plug to finish
+      {:noreply, %{state | caller_awaiting_down: from}}
+    else
+      do_down(ref, socket)
+      {:reply, :ok, %{state | socket: nil}}
+    end
   end
 
   defp do_handle_call({:expect, nil}, _from, state) do
@@ -87,18 +109,22 @@ defmodule Bypass.Instance do
   end
 
   defp do_handle_call({:put_expect_result, result}, _from, state) do
-    {:reply, :ok, %{state | request_result: result}}
+    updated_state =
+      %{state | request_result: result}
+      |> Map.put(:retained_plug, nil)
+      |> dispatch_awaiting_caller()
+    {:reply, :ok, updated_state}
   end
 
   defp do_handle_call(:on_exit, _from, state) do
-    state = case state do
-      %{socket: nil} -> state
-      %{socket: socket, ref: ref} ->
-        do_down(ref, socket)
-        %{state | socket: nil}
-    end
-
-    {:stop, :normal, state.request_result, state}
+    updated_state =
+      case state do
+        %{socket: nil} -> state
+        %{socket: socket, ref: ref} ->
+          do_down(ref, socket)
+          %{state | socket: nil}
+      end
+    {:stop, :normal, state.request_result, updated_state}
   end
 
   defp do_up(port, ref) do
@@ -119,6 +145,18 @@ defmodule Bypass.Instance do
     case :erlang.port_info(socket, :name) do
       :undefined -> :ok
       _ -> :erlang.port_close(socket)
+    end
+  end
+
+  defp dispatch_awaiting_caller(
+    %{retained_plug: retained_plug, caller_awaiting_down: caller, socket: socket, ref: ref} = state)
+  do
+    if retained_plug == nil and caller != nil do
+      do_down(ref, socket)
+      GenServer.reply(caller, :ok)
+      %{state | socket: nil, caller_awaiting_down: nil}
+    else
+      state
     end
   end
 end
