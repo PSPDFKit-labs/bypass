@@ -94,6 +94,27 @@ defmodule BypassTest do
     assert {:error, {:closed, 'The connection was lost.'}} == request(bypass.port)
   end
 
+  test "Bypass.down waits for plug process to terminate before shutting it down" do
+    test_process = self()
+    ref = make_ref()
+
+    bypass = Bypass.open
+    Bypass.expect(bypass, fn conn ->
+      result = Plug.Conn.send_resp(conn, 200, "")
+      :timer.sleep(200)
+      send(test_process, ref)
+      result
+    end)
+
+    assert {:ok, 200, ""} = request(bypass.port)
+
+    # Here we make sure that Bypass.down waits until the plug process finishes its work
+    # before shutting down
+    refute_received ^ref
+    Bypass.down(bypass)
+    assert_received ^ref
+  end
+
   @doc ~S"""
   Open a new HTTP connection and perform the request. We don't want to use httpc, hackney or another
   "high-level" HTTP client, since they do connection pooling and we will sometimes get a connection

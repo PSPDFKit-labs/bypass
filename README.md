@@ -89,3 +89,11 @@ That's all you need to do. Bypass automatically sets up an `on_exit` hook to clo
 the test finishes running.
 
 Multiple concurrent Bypass instances are supported, all will have a different unique port.
+
+## Configuration options
+
+Set `:enable_debug_log` to `true` in the application environment to make Bypass log what it's doing:
+
+```elixir
+config :bypass, enable_debug_log: true
+```
