@@ -18,8 +18,8 @@ defmodule Bypass.Mixfile do
 
   defp deps do
     [
-      {:cowboy, "~> 1.0.0",},
-      {:plug, "~> 1.0.0"},
+      {:cowboy, "~> 1.0",},
+      {:plug, "~> 1.0"},
     ]
   end
 
