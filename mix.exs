@@ -3,7 +3,7 @@ defmodule Bypass.Mixfile do
 
   def project do
     [app: :bypass,
-     version: "0.5.0",
+     version: "0.5.1",
      elixir: ">= 1.1.0",
      description: description,
      package: package,
