@@ -30,7 +30,8 @@ defmodule Bypass.Instance do
   # GenServer callbacks
 
   def init([parent]) do
-    Logger.debug "[Bypass.Instance] init([#{inspect parent}])"
+    if Bypass.debug_log_enabled?,
+      do: Logger.debug "[Bypass.Instance] init([#{inspect parent}])"
 
     # Get a free port from the OS
     {:ok, socket} = :ranch_tcp.listen(port: 0)
