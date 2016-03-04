@@ -33,5 +33,6 @@ defmodule Bypass do
   def pass(%Bypass{pid: pid}), do: Bypass.Instance.call(pid, {:put_expect_result, :ok})
 
   @doc false
-  def debug_log_enabled?, do: Application.fetch_env!(:bypass, :enable_debug_log)
+  def debug_log_enabled?,
+    do: Application.get_env(:bypass, :enable_debug_log)
 end
