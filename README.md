@@ -7,7 +7,6 @@ HTTP server to return prebaked responses to client requests. This is most useful
 want to create a mock HTTP server and test how your HTTP client handles different types of
 responses from the server.
 
-
 ## Installation
 
 Add bypass to your list of dependencies in mix.exs:
@@ -18,8 +17,10 @@ def deps do
 end
 ```
 
-It is not recommended to add `:bypass` to the list of applications in your `mix.exs`. See below
+We do not recommended adding `:bypass` to the list of applications in your `mix.exs`. See below
 for usage info.
+
+Bypass supports Elixir 1.0 and up.
 
 
 ## Usage
