@@ -2,4 +2,4 @@
   "cowlib": {:hex, :cowlib, "1.0.2"},
   "gun": {:git, "https://github.com/PSPDFKit-labs/gun.git", "0462585ec7b0bcb2ca4b8b91e6d2624a45324b6e", []},
   "plug": {:hex, :plug, "1.1.0"},
-  "ranch": {:hex, :ranch, "1.2.0"}}
+  "ranch": {:hex, :ranch, "1.2.1"}}

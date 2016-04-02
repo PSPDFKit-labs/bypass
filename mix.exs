@@ -34,7 +34,7 @@ defmodule Bypass.Mixfile do
   defp deps(:test) do
     deps() ++ [
       {:cowlib, "~> 1.0.1", override: true},
-      {:ranch, "~> 1.1.0", override: true},
+      {:ranch, "~> 1.2.0", override: true},
 
       {:gun, github: "PSPDFKit-labs/gun", only: :test}
     ]
