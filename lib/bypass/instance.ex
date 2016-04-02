@@ -1,7 +1,7 @@
 defmodule Bypass.Instance do
   use GenServer
 
-  require Logger
+  import Bypass.Utils
 
   def start_link do
     case GenServer.start_link(__MODULE__, [self()]) do
@@ -15,11 +15,9 @@ defmodule Bypass.Instance do
   end
 
   def call(pid, request) do
-    if Bypass.debug_log_enabled?,
-      do: Logger.debug "[Bypass.Instance] call(#{inspect pid}, #{inspect request})"
+    debug_log "call(#{inspect pid}, #{inspect request})"
     result = GenServer.call(pid, request, :infinity)
-    if Bypass.debug_log_enabled?,
-      do: Logger.debug "[Bypass.Instance] #{inspect pid} -> #{inspect result}"
+    debug_log "#{inspect pid} -> #{inspect result}"
     result
   end
 
@@ -30,8 +28,7 @@ defmodule Bypass.Instance do
   # GenServer callbacks
 
   def init([parent]) do
-    if Bypass.debug_log_enabled?,
-      do: Logger.debug "[Bypass.Instance] init([#{inspect parent}])"
+    debug_log "init([#{inspect parent}])"
 
     # Get a free port from the OS
     {:ok, socket} = :ranch_tcp.listen(port: 0)
@@ -57,22 +54,15 @@ defmodule Bypass.Instance do
   end
 
   def handle_call(request, from, state) do
-    if Bypass.debug_log_enabled? do
-      Logger.debug [
-        "[Bypass.Instance] ", inspect(self()),
-        " called ", inspect(request), " with state ", inspect(state)
-      ]
-    end
+    debug_log [inspect(self()), " called ", inspect(request), " with state ", inspect(state)]
     do_handle_call(request, from, state)
   end
 
   def handle_cast({:retain_plug_process, caller_pid}, state) do
-    if Bypass.debug_log_enabled? do
-      Logger.debug [
-        "[Bypass.Instance] ", inspect(self()), " retain_plug_process ", inspect(caller_pid),
-        ", retained_plug: ", inspect(state.retained_plug)
-      ]
-    end
+    debug_log [
+      inspect(self()), " retain_plug_process ", inspect(caller_pid),
+      ", retained_plug: ", inspect(state.retained_plug)
+    ]
     {:noreply, Map.update!(state, :retained_plug, fn nil -> caller_pid end)}
   end
 

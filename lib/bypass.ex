@@ -1,12 +1,13 @@
 defmodule Bypass do
   defstruct pid: nil, port: nil
 
+  import Bypass.Utils
   require Logger
 
   def open do
     {:ok, pid, port} = Supervisor.start_child(Bypass.Supervisor, [])
-    if debug_log_enabled?,
-      do: Logger.debug "[Bypass] Did open connection #{inspect pid} on port #{inspect port}"
+
+    debug_log "Did open connection #{inspect pid} on port #{inspect port}"
     ExUnit.Callbacks.on_exit({Bypass, pid}, fn ->
       case Bypass.Instance.call(pid, :on_exit) do
         :ok ->
@@ -39,7 +40,4 @@ defmodule Bypass do
   def pass(%Bypass{pid: pid}),
     do: Bypass.Instance.call(pid, {:put_expect_result, :ok})
 
-  @doc false
-  def debug_log_enabled?,
-    do: Application.get_env(:bypass, :enable_debug_log)
 end
