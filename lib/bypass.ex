@@ -24,13 +24,20 @@ defmodule Bypass do
     %Bypass{pid: pid, port: port}
   end
 
-  def up(%Bypass{pid: pid}), do: Bypass.Instance.call(pid, :up)
+  def up(%Bypass{pid: pid}),
+    do: Bypass.Instance.call(pid, :up)
 
-  def down(%Bypass{pid: pid}), do: Bypass.Instance.call(pid, :down)
+  def down(%Bypass{pid: pid}),
+    do: Bypass.Instance.call(pid, :down)
 
-  def expect(%Bypass{pid: pid}, fun), do: Bypass.Instance.call(pid, {:expect, fun})
+  def expect(%Bypass{pid: pid}, fun),
+    do: Bypass.Instance.call(pid, {:expect, fun})
 
-  def pass(%Bypass{pid: pid}), do: Bypass.Instance.call(pid, {:put_expect_result, :ok})
+  def expect(%Bypass{pid: pid}, method, path, fun),
+    do: Bypass.Instance.call(pid, {:expect, method, path, fun})
+
+  def pass(%Bypass{pid: pid}),
+    do: Bypass.Instance.call(pid, {:put_expect_result, :ok})
 
   @doc false
   def debug_log_enabled?,
