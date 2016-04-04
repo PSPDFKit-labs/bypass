@@ -24,7 +24,8 @@ defmodule Bypass.Mixfile do
   end
 
   defp env do
-    [enable_debug_log: false]
+    [enable_debug_log: false,
+     interface: {127, 0, 0, 1}]
   end
 
   # We need to work around the fact that gun would pull in cowlib/ranch from git, while cowboy/plug

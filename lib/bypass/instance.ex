@@ -31,7 +31,8 @@ defmodule Bypass.Instance do
     debug_log "init([#{inspect parent}])"
 
     # Get a free port from the OS
-    {:ok, socket} = :ranch_tcp.listen(port: 0)
+    interface = Application.get_env(:bypass, :interface, {127, 0, 0, 1})
+    {:ok, socket} = :ranch_tcp.listen(port: 0, ip: interface)
     {:ok, port} = :inet.port(socket)
     :erlang.port_close(socket)
 
@@ -120,7 +121,8 @@ defmodule Bypass.Instance do
 
   defp do_up(port, ref) do
     plug_opts = [self()]
-    {:ok, socket} = :ranch_tcp.listen(port: port)
+    interface = Application.get_env(:bypass, :interface, {127, 0, 0, 1})
+    {:ok, socket} = :ranch_tcp.listen(port: port, ip: interface)
     cowboy_opts = [ref: ref, acceptors: 5, port: port, socket: socket]
     {:ok, _pid} = Plug.Adapters.Cowboy.http(Bypass.Plug, plug_opts, cowboy_opts)
     socket
