@@ -98,3 +98,10 @@ Set `:enable_debug_log` to `true` in the application environment to make Bypass 
 ```elixir
 config :bypass, enable_debug_log: true
 ```
+
+Set `:interface` to an ip tuple to listen on a different network interface from the default:
+
+```elixir
+config :bypass, interface: {0, 0, 0, 0}
+```
+
