@@ -53,9 +53,12 @@ defmodule Bypass.Mixfile do
   defp package do
     [
       files: ["lib", "mix.exs", "README.md", "LICENSE"],
-      maintainers: ["pspdfkit.com"],
+      maintainers: ["PSPDFKit"],
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/pspdfkit-labs/bypass"}
+      links: %{
+        "GitHub" => "https://github.com/pspdfkit-labs/bypass",
+        "PSPDFKit" => "https://pspdfkit.com",
+      }
     ]
   end
 end
