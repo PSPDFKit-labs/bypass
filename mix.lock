@@ -1,5 +1,5 @@
-%{"cowboy": {:hex, :cowboy, "1.0.4"},
-  "cowlib": {:hex, :cowlib, "1.0.2"},
+%{"cowboy": {:hex, :cowboy, "1.0.4", "a324a8df9f2316c833a470d918aaf73ae894278b8aa6226ce7a9bf699388f878", [:rebar, :make], [{:cowlib, "~> 1.0.0", [hex: :cowlib, optional: false]}, {:ranch, "~> 1.0", [hex: :ranch, optional: false]}]},
+  "cowlib": {:hex, :cowlib, "1.0.2", "9d769a1d062c9c3ac753096f868ca121e2730b9a377de23dec0f7e08b1df84ee", [:make], []},
   "gun": {:git, "https://github.com/PSPDFKit-labs/gun.git", "0462585ec7b0bcb2ca4b8b91e6d2624a45324b6e", []},
-  "plug": {:hex, :plug, "1.1.0"},
-  "ranch": {:hex, :ranch, "1.2.1"}}
+  "plug": {:hex, :plug, "1.1.0", "69078a481549b81e879e169fbe099a509baf8d6a793db757f39f86258f91db07", [:mix], [{:cowboy, "~> 1.0", [hex: :cowboy, optional: true]}]},
+  "ranch": {:hex, :ranch, "1.2.1", "a6fb992c10f2187b46ffd17ce398ddf8a54f691b81768f9ef5f461ea7e28c762", [:make], []}}
