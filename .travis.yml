@@ -2,10 +2,10 @@ language: elixir
 elixir:
   - 1.0.5
   - 1.1.1
-  - 1.2.4
+  - 1.2.5
 otp_release:
   - 17.5
-  - 18.2.1
+  - 18.3
 sudo: false # to use faster container based build environment
 env:
   - MIX_ENV=test
