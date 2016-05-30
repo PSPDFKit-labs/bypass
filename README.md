@@ -35,11 +35,11 @@ Application.ensure_all_started(:bypass)
 To use Bypass in a test case, open a connection and use its port to connect your client to it.
 
 If you want to test what happens when the HTTP server goes down, use `Bypass.down/1` to close the
-port and `Bypass.up/1` to start listening on the same port again. Both functions guarantee
-that the port will be closed, respective open, after returning:
+TCP socket and `Bypass.up/1` to start listening on the same port again. Both functions block until
+the socket updates its state.
 
-
-In this example `TwitterClient` reads its endpoint URL from the `Application`'s configuration:
+In the following example `TwitterClient` reads its endpoint URL from the `Application`'s
+configuration:
 
 ```elixir
 defmodule TwitterClientTest do
@@ -77,7 +77,7 @@ defmodule TwitterClientTest do
 
     Bypass.up(bypass)
 
-    # When testing a real client that is using i.e. https://github.com/fishcakez/connection
+    # When testing a real client that is using e.g. https://github.com/fishcakez/connection
     # with https://github.com/ferd/backoff to handle reconnecting, we'd have to loop for
     # a while until the client has reconnected.
 
@@ -98,3 +98,7 @@ Set `:enable_debug_log` to `true` in the application environment to make Bypass 
 ```elixir
 config :bypass, enable_debug_log: true
 ```
+
+## License
+
+This software is licensed under [the MIT license](LICENSE).
