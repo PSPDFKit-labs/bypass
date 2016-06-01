@@ -3,6 +3,11 @@ defmodule Bypass.Instance do
 
   import Bypass.Utils
 
+  # This is used to override the default behaviour of ranch_tcp
+  # and limit the range of interfaces it will listen on to just
+  # the loopback interface.
+  @listen_ip {127, 0, 0, 1}
+
   def start_link(opts \\ []) do
     case GenServer.start_link(__MODULE__, [self(), opts]) do
       {:ok, pid} ->
@@ -31,7 +36,7 @@ defmodule Bypass.Instance do
     debug_log "init([#{inspect parent}])"
 
     # Get a free port from the OS
-    case :ranch_tcp.listen(port: Keyword.get(opts, :port, 0)) do
+    case :ranch_tcp.listen(ip: @listen_ip, port: Keyword.get(opts, :port, 0)) do
       {:ok, socket} ->
         {:ok, port} = :inet.port(socket)
         :erlang.port_close(socket)
@@ -124,7 +129,7 @@ defmodule Bypass.Instance do
 
   defp do_up(port, ref) do
     plug_opts = [self()]
-    {:ok, socket} = :ranch_tcp.listen(port: port)
+    {:ok, socket} = :ranch_tcp.listen(ip: @listen_ip, port: port)
     cowboy_opts = [ref: ref, acceptors: 5, port: port, socket: socket]
     {:ok, _pid} = Plug.Adapters.Cowboy.http(Bypass.Plug, plug_opts, cowboy_opts)
     socket
