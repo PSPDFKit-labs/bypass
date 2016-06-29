@@ -35,7 +35,7 @@ defmodule Bypass.Instance do
     {:ok, port} = :inet.port(socket)
     :erlang.port_close(socket)
 
-    ref = make_ref
+    ref = make_ref()
     socket = do_up(port, ref)
 
     state = %{
