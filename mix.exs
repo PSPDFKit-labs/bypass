@@ -5,15 +5,15 @@ defmodule Bypass.Mixfile do
     [app: :bypass,
      version: "0.5.1",
      elixir: "~> 1.0",
-     description: description,
-     package: package,
+     description: description(),
+     package: package(),
      deps: deps(Mix.env)]
   end
 
   def application do
     [applications: [:logger, :ranch, :cowboy, :plug],
      mod: {Bypass.Application, []},
-     env: env]
+     env: env()]
   end
 
   defp deps do
