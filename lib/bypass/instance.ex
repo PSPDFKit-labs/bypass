@@ -4,14 +4,7 @@ defmodule Bypass.Instance do
   import Bypass.Utils
 
   def start_link do
-    case GenServer.start_link(__MODULE__, [self()]) do
-      {:ok, pid} ->
-        port = receive do
-          {:bypass_port, ^pid, port} -> port
-        end
-        {:ok, pid, port}
-      {:error, _} = err -> err
-    end
+    GenServer.start_link(__MODULE__, [], [])
   end
 
   def call(pid, request) do
@@ -27,7 +20,7 @@ defmodule Bypass.Instance do
 
   # GenServer callbacks
 
-  def init([parent]) do
+  def init(_args) do
     debug_log "init([#{inspect parent}])"
 
     # Get a free port from the OS
@@ -48,8 +41,6 @@ defmodule Bypass.Instance do
       caller_awaiting_down: nil,
     }
 
-    send(parent, {:bypass_port, self(), port})
-
     {:ok, state}
   end
 
@@ -66,6 +57,9 @@ defmodule Bypass.Instance do
     {:noreply, Map.update!(state, :retained_plug, fn nil -> caller_pid end)}
   end
 
+  defp do_handle_call(:port, _, state) do
+    {:reply, state[:port], state}
+  end
   defp do_handle_call(:up, _from, %{port: port, ref: ref, socket: nil} = state) do
     socket = do_up(port, ref)
     {:reply, :ok, %{state | socket: socket}}
