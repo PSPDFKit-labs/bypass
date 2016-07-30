@@ -38,16 +38,15 @@ If you want to test what happens when the HTTP server goes down, use `Bypass.dow
 TCP socket and `Bypass.up/1` to start listening on the same port again. Both functions block until
 the socket updates its state.
 
-In the following example `TwitterClient` reads its endpoint URL from the `Application`'s
-configuration:
+In the following example `TwitterClient.start_link()` takes the endpoint URL as its argument
+allowing us to make sure it will connect to the running instance of Bypass.
 
 ```elixir
 defmodule TwitterClientTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   setup do
     bypass = Bypass.open
-    Application.put_env(:twitter_client, :endpoint, "http://localhost:#{bypass.port}/")
     {:ok, bypass: bypass}
   end
 
@@ -57,7 +56,7 @@ defmodule TwitterClientTest do
       assert "POST" == conn.method
       Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
     end
-    {:ok, client} = TwitterClient.start_link()
+    {:ok, client} = TwitterClient.start_link(url: endpoint_url(bypass.port))
     assert {:error, :rate_limited} == TwitterClient.post_tweet(client, "Elixir is awesome!")
   end
 
@@ -66,7 +65,7 @@ defmodule TwitterClientTest do
       # We don't care about `request_path` or `method` for this test.
       Plug.Conn.resp(conn, 200, "")
     end
-    {:ok, client} = TwitterClient.start_link()
+    {:ok, client} = TwitterClient.start_link(url: endpoint_url(bypass.port))
 
     assert :ok == TwitterClient.post_tweet(client, "Elixir is awesome!")
 
@@ -83,6 +82,8 @@ defmodule TwitterClientTest do
 
     assert :ok == TwitterClient.post_tweet(client, "Elixir is awesome!")
   end
+
+  defp endpoint_url(port), do: "http://localhost:#{port}/"
 end
 ```
 
