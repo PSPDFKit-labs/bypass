@@ -6,7 +6,8 @@ defmodule Bypass do
 
   def open(opts \\ []) do
     case Supervisor.start_child(Bypass.Supervisor, [opts]) do
-      {:ok, pid, port} ->
+      {:ok, pid} ->
+        port = Bypass.Instance.call(pid, :port)
         debug_log "Did open connection #{inspect pid} on port #{inspect port}"
         ExUnit.Callbacks.on_exit({Bypass, pid}, fn ->
           case Bypass.Instance.call(pid, :on_exit) do

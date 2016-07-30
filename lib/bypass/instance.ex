@@ -9,14 +9,7 @@ defmodule Bypass.Instance do
   @listen_ip {127, 0, 0, 1}
 
   def start_link(opts \\ []) do
-    case GenServer.start_link(__MODULE__, [self(), opts]) do
-      {:ok, pid} ->
-        port = receive do
-          {:bypass_port, ^pid, port} -> port
-        end
-        {:ok, pid, port}
-      {:error, _} = err -> err
-    end
+    GenServer.start_link(__MODULE__, [opts])
   end
 
   def call(pid, request) do
@@ -32,9 +25,7 @@ defmodule Bypass.Instance do
 
   # GenServer callbacks
 
-  def init([parent, opts]) do
-    debug_log "init([#{inspect parent}])"
-
+  def init([opts]) do
     # Get a free port from the OS
     case :ranch_tcp.listen(ip: @listen_ip, port: Keyword.get(opts, :port, 0)) do
       {:ok, socket} ->
@@ -54,8 +45,6 @@ defmodule Bypass.Instance do
           caller_awaiting_down: nil,
         }
 
-        send(parent, {:bypass_port, self(), port})
-
         {:ok, state}
       {:error, reason} ->
         {:stop, reason}
@@ -73,6 +62,10 @@ defmodule Bypass.Instance do
       ", retained_plug: ", inspect(state.retained_plug)
     ]
     {:noreply, Map.update!(state, :retained_plug, fn nil -> caller_pid end)}
+  end
+
+  defp do_handle_call(:port, _, %{port: port} = state) do
+    {:reply, port, state}
   end
 
   defp do_handle_call(:up, _from, %{port: port, ref: ref, socket: nil} = state) do
