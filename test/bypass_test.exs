@@ -14,7 +14,6 @@ defmodule BypassTest do
     end
   end
 
-
   test "Bypass.expect's fun gets called for every single request" do
     bypass = Bypass.open
     parent = self()
@@ -26,6 +25,17 @@ defmodule BypassTest do
       assert {:ok, 200, ""} = request(bypass.port)
       assert_receive :request_received
     end)
+  end
+
+  test "Bypass.open can specify a port to operate on" do
+    port = 1234
+    bypass = Bypass.open(port: port)
+
+    Bypass.expect(bypass, fn conn ->
+      Plug.Conn.send_resp(conn, 200, "")
+    end)
+
+    assert {:ok, 200, ""} = request(port)
   end
 
   test "Bypass.down takes down the socket" do
