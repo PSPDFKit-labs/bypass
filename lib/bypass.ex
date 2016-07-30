@@ -34,9 +34,6 @@ defmodule Bypass do
   def expect(%Bypass{pid: pid}, fun),
     do: Bypass.Instance.call(pid, {:expect, fun})
 
-  def expect(%Bypass{pid: pid}, method, path, fun),
-    do: Bypass.Instance.call(pid, {:expect, method, path, fun})
-
   def pass(%Bypass{pid: pid}),
     do: Bypass.Instance.call(pid, {:put_expect_result, :ok})
 
