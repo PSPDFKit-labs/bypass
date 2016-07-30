@@ -32,10 +32,13 @@ defmodule BypassTest do
     bypass = Bypass.open(port: port)
 
     Bypass.expect(bypass, fn conn ->
+      assert port == conn.port
       Plug.Conn.send_resp(conn, 200, "")
     end)
 
     assert {:ok, 200, ""} = request(port)
+
+    assert {:error, :eaddrinuse} == Bypass.open(port: port)
   end
 
   test "Bypass.down takes down the socket" do

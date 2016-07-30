@@ -4,9 +4,7 @@ defmodule Bypass.Instance do
   import Bypass.Utils
 
   def start_link(opts \\ []) do
-    options = [self() | opts]
-
-    case GenServer.start_link(__MODULE__, options) do
+    case GenServer.start_link(__MODULE__, [self(), opts]) do
       {:ok, pid} ->
         port = receive do
           {:bypass_port, ^pid, port} -> port
@@ -29,30 +27,34 @@ defmodule Bypass.Instance do
 
   # GenServer callbacks
 
-  def init([parent | opts]) do
+  def init([parent, opts]) do
     debug_log "init([#{inspect parent}])"
 
     # Get a free port from the OS
-    {:ok, socket} = :ranch_tcp.listen(port: 0)
-    {:ok, port} = select_port(socket, opts)
-    :erlang.port_close(socket)
+    case :ranch_tcp.listen(port: Keyword.get(opts, :port, 0)) do
+      {:ok, socket} ->
+        {:ok, port} = :inet.port(socket)
+        :erlang.port_close(socket)
 
-    ref = make_ref()
-    socket = do_up(port, ref)
+        ref = make_ref()
+        socket = do_up(port, ref)
 
-    state = %{
-      expect_fun: nil,
-      port: port,
-      ref: ref,
-      request_result: :ok,
-      socket: socket,
-      retained_plug: nil,
-      caller_awaiting_down: nil,
-    }
+        state = %{
+          expect_fun: nil,
+          port: port,
+          ref: ref,
+          request_result: :ok,
+          socket: socket,
+          retained_plug: nil,
+          caller_awaiting_down: nil,
+        }
 
-    send(parent, {:bypass_port, self(), port})
+        send(parent, {:bypass_port, self(), port})
 
-    {:ok, state}
+        {:ok, state}
+      {:error, reason} ->
+        {:stop, reason}
+    end
   end
 
   def handle_call(request, from, state) do
@@ -66,15 +68,6 @@ defmodule Bypass.Instance do
       ", retained_plug: ", inspect(state.retained_plug)
     ]
     {:noreply, Map.update!(state, :retained_plug, fn nil -> caller_pid end)}
-  end
-
-  def select_port(socket, opts \\ []) do
-    options_map = Enum.into(opts, %{})
-
-    case options_map do
-      %{port: port} -> {:ok, port}
-      _ -> :inet.port(socket)
-    end
   end
 
   defp do_handle_call(:up, _from, %{port: port, ref: ref, socket: nil} = state) do

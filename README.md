@@ -92,6 +92,13 @@ the test finishes running.
 
 Multiple concurrent Bypass instances are supported, all will have a different unique port.
 
+In case you need to assign a specific port to a Bypass instance to listen on, you can pass the
+`port` option to `Bypass.open()`:
+
+```elixir
+bypass = Bypass.open(port: 1234)
+```
+
 ## Configuration options
 
 Set `:enable_debug_log` to `true` in the application environment to make Bypass log what it's doing:
