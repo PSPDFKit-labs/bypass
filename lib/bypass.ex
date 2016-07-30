@@ -5,7 +5,8 @@ defmodule Bypass do
   require Logger
 
   def open do
-    {:ok, pid, port} = Supervisor.start_child(Bypass.Supervisor, [])
+    {:ok, pid} = Supervisor.start_child(Bypass.Supervisor, [])
+    port = Bypass.Instance.call(pid, :port)
 
     debug_log "Did open connection #{inspect pid} on port #{inspect port}"
     ExUnit.Callbacks.on_exit({Bypass, pid}, fn ->
