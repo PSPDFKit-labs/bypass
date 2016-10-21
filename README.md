@@ -54,7 +54,7 @@ defmodule TwitterClientTest do
     Bypass.expect bypass, fn conn ->
       assert "/1.1/statuses/update.json" == conn.request_path
       assert "POST" == conn.method
-      Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+      Plug.Conn.send_resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
     end
     {:ok, client} = TwitterClient.start_link(url: endpoint_url(bypass.port))
     assert {:error, :rate_limited} == TwitterClient.post_tweet(client, "Elixir is awesome!")
@@ -63,7 +63,7 @@ defmodule TwitterClientTest do
   test "client can recover from server downtime", %{bypass: bypass} do
     Bypass.expect bypass, fn conn ->
       # We don't care about `request_path` or `method` for this test.
-      Plug.Conn.resp(conn, 200, "")
+      Plug.Conn.send_resp(conn, 200, "")
     end
     {:ok, client} = TwitterClient.start_link(url: endpoint_url(bypass.port))
 
