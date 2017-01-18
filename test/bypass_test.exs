@@ -140,6 +140,22 @@ defmodule BypassTest do
     assert_received ^ref
   end
 
+  test "Bypass can handle concurrent requests" do
+    bypass = Bypass.open
+    parent = self()
+    Bypass.expect(bypass, fn conn ->
+      send(parent, :request_received)
+      Plug.Conn.send_resp(conn, 200, "")
+    end)
+    tasks = Enum.map(1..5, fn _ ->
+      Task.async(fn -> request(bypass.port) end)
+    end)
+    Enum.map(tasks, fn task ->
+      Task.await(task)
+      assert_receive :request_received
+    end)
+  end
+
   @doc ~S"""
   Open a new HTTP connection and perform the request. We don't want to use httpc, hackney or another
   "high-level" HTTP client, since they do connection pooling and we will sometimes get a connection

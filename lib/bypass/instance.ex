@@ -41,7 +41,7 @@ defmodule Bypass.Instance do
           ref: ref,
           request_result: :ok,
           socket: socket,
-          retained_plug: nil,
+          retained_plugs: [],
           caller_awaiting_down: nil,
         }
 
@@ -59,9 +59,9 @@ defmodule Bypass.Instance do
   def handle_cast({:retain_plug_process, caller_pid}, state) do
     debug_log [
       inspect(self()), " retain_plug_process ", inspect(caller_pid),
-      ", retained_plug: ", inspect(state.retained_plug)
+      ", retained_plugs: ", inspect(state.retained_plugs)
     ]
-    {:noreply, Map.update!(state, :retained_plug, fn nil -> caller_pid end)}
+    {:noreply, Map.update!(state, :retained_plugs, &([caller_pid | &1]))}
   end
 
   defp do_handle_call(:port, _, %{port: port} = state) do
@@ -81,7 +81,7 @@ defmodule Bypass.Instance do
   end
   defp do_handle_call(:down, from, %{socket: socket, ref: ref} = state) when not is_nil(socket) do
     nil = state.caller_awaiting_down  # assertion
-    if state.retained_plug != nil do
+    if state.retained_plugs != [] do
       # wait for the plug to finish
       {:noreply, %{state | caller_awaiting_down: from}}
     else
@@ -101,10 +101,10 @@ defmodule Bypass.Instance do
     {:reply, expect_fun, state}
   end
 
-  defp do_handle_call({:put_expect_result, result}, _from, state) do
+  defp do_handle_call({:put_expect_result, result}, {caller_pid, _}, %{retained_plugs: plugs} = state) do
     updated_state =
       %{state | request_result: result}
-      |> Map.put(:retained_plug, nil)
+      |> Map.put(:retained_plugs, List.delete(plugs, caller_pid))
       |> dispatch_awaiting_caller()
     {:reply, :ok, updated_state}
   end
@@ -142,9 +142,9 @@ defmodule Bypass.Instance do
   end
 
   defp dispatch_awaiting_caller(
-    %{retained_plug: retained_plug, caller_awaiting_down: caller, socket: socket, ref: ref} = state)
+    %{retained_plugs: retained_plugs, caller_awaiting_down: caller, socket: socket, ref: ref} = state)
   do
-    if retained_plug == nil and caller != nil do
+    if retained_plugs == [] and caller != nil do
       do_down(ref, socket)
       GenServer.reply(caller, :ok)
       %{state | socket: nil, caller_awaiting_down: nil}
