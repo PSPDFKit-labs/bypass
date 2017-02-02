@@ -1,4 +1,4 @@
-%{"cowboy": {:hex, :cowboy, "1.0.4", "a324a8df9f2316c833a470d918aaf73ae894278b8aa6226ce7a9bf699388f878", [:rebar, :make], [{:cowlib, "~> 1.0.0", [hex: :cowlib, optional: false]}, {:ranch, "~> 1.0", [hex: :ranch, optional: false]}]},
+%{"cowboy": {:hex, :cowboy, "1.0.4", "a324a8df9f2316c833a470d918aaf73ae894278b8aa6226ce7a9bf699388f878", [:make, :rebar], [{:cowlib, "~> 1.0.0", [hex: :cowlib, optional: false]}, {:ranch, "~> 1.0", [hex: :ranch, optional: false]}]},
   "cowlib": {:hex, :cowlib, "1.0.2", "9d769a1d062c9c3ac753096f868ca121e2730b9a377de23dec0f7e08b1df84ee", [:make], []},
   "gun": {:git, "https://github.com/PSPDFKit-labs/gun.git", "0462585ec7b0bcb2ca4b8b91e6d2624a45324b6e", []},
   "plug": {:hex, :plug, "1.1.6", "8927e4028433fcb859e000b9389ee9c37c80eb28378eeeea31b0273350bf668b", [:mix], [{:cowboy, "~> 1.0", [hex: :cowboy, optional: true]}]},
