@@ -13,7 +13,7 @@ Add bypass to your list of dependencies in mix.exs:
 
 ```elixir
 def deps do
-  [{:bypass, "~> 0.1", only: :test}]
+  [{:bypass, "~> 0.6", only: :test}]
 end
 ```
 
