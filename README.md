@@ -38,6 +38,72 @@ If you want to test what happens when the HTTP server goes down, use `Bypass.dow
 TCP socket and `Bypass.up/1` to start listening on the same port again. Both functions block until
 the socket updates its state.
 
+### Expect Functions
+
+You can take any of the following approaches:
+* `expect/2` or `expect_once/2` to install a generic function that all calls to bypass will use
+* `expect/4` and/or `expect_once/4` to install specific routes (method, path combinations)
+* a combination of the above, where the routes will be used first, and then the generic version
+  will be used as default
+
+#### expect/2 (bypass_instance, function)
+
+Must be called at least once, and it will error if not.  As an alternative, `nil` can be passed
+in place of a function to indicate that it should never be called (and it will error if it is).
+
+```elixir
+  Bypass.expect bypass, fn conn ->
+    assert "/1.1/statuses/update.json" == conn.request_path
+    assert "POST" == conn.method
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+  end
+```
+
+#### expect_once/2 (bypass_instance, function)
+
+Must be called exactly once, and it will error if not. As an alternative, `nil` can be passed
+in place of a function to indicate that it should never be called (and it will error if it is)
+
+```elixir
+  Bypass.expect_once bypass, fn conn ->
+    assert "/1.1/statuses/update.json" == conn.request_path
+    assert "POST" == conn.method
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+  end
+```
+
+#### expect/4 (bypass_instance, method | [method1, method2...], path | [path1, path2...], function)
+
+Must be called at least once, and it will error if not.  As an alternative, `nil` can be passed
+in place of a function to indicate that it should never be called (and it will error if it is).
+
+The methods can be passed as a binary or a `List` of binaries, and the paths can also be passed in
+that way.  All combinations will be required to be called.
+
+```elixir
+  Bypass.expect bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+    Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no+1} end)
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+  end
+```
+
+#### expect_once/4 (bypass_instance, method | [method1, method2...], path | [path1, path2...], function)
+
+Must be called exactly once, and it will error if not. As an alternative, `nil` can be passed
+in place of a function to indicate that it should never be called (and it will error if it is).
+
+The methods can be passed as a binary or a `List` of binaries, and the paths can also be passed in
+that way.  All combinations will be required to be called.
+
+```elixir
+  Bypass.expect_once bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+    Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no+1} end)
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+  end
+```
+
+### Example
+
 In the following example `TwitterClient.start_link()` takes the endpoint URL as its argument
 allowing us to make sure it will connect to the running instance of Bypass.
 
@@ -51,11 +117,10 @@ defmodule TwitterClientTest do
   end
 
   test "client can handle an error response", %{bypass: bypass} do
-    Bypass.expect bypass, fn conn ->
-      assert "/1.1/statuses/update.json" == conn.request_path
-      assert "POST" == conn.method
+    Bypass.expect_once bypass, "POST", "/1.1/statuses/update.json", fn conn ->
       Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
     end
+    Bypass.expect bypass, nil # ensure that no other API endpoints are called
     {:ok, client} = TwitterClient.start_link(url: endpoint_url(bypass.port))
     assert {:error, :rate_limited} == TwitterClient.post_tweet(client, "Elixir is awesome!")
   end
@@ -90,7 +155,8 @@ end
 That's all you need to do. Bypass automatically sets up an `on_exit` hook to close its socket when
 the test finishes running.
 
-Multiple concurrent Bypass instances are supported, all will have a different unique port.
+Multiple concurrent Bypass instances are supported, all will have a different unique port.  Concurrent
+requests are also supported on the same instance.
 
 In case you need to assign a specific port to a Bypass instance to listen on, you can pass the
 `port` option to `Bypass.open()`:

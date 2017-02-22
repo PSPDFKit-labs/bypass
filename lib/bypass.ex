@@ -15,10 +15,8 @@ defmodule Bypass do
               :ok
             :ok_call ->
               :ok
-            {:error, :not_called} ->
-              raise ExUnit.AssertionError, "No HTTP request arrived at Bypass"
-            {:error, :unexpected_request} ->
-              raise ExUnit.AssertionError, "Bypass got an HTTP request but wasn't expecting one"
+            {:error, :unexpected_count, errors} ->
+              raise ExUnit.AssertionError, errors
             {:exit, {class, reason, stacktrace}} ->
               :erlang.raise(class, reason, stacktrace)
           end
@@ -38,7 +36,16 @@ defmodule Bypass do
   def expect(%Bypass{pid: pid}, fun),
     do: Bypass.Instance.call(pid, {:expect, fun})
 
+  def expect(%Bypass{pid: pid}, methods, paths, fun),
+    do: Bypass.Instance.call(pid, {:expect, methods, paths, fun})
+
+  def expect_once(%Bypass{pid: pid}, fun),
+    do: Bypass.Instance.call(pid, {:expect_once, fun})
+
+  def expect_once(%Bypass{pid: pid}, methods, paths, fun),
+    do: Bypass.Instance.call(pid, {:expect_once, methods, paths, fun})
+
   def pass(%Bypass{pid: pid}),
-    do: Bypass.Instance.call(pid, {:put_expect_result, :ok})
+    do: Bypass.Instance.call(pid, :pass)
 
 end
