@@ -15,11 +15,7 @@ defmodule BypassTest do
   end
 
   test "Bypass.expect's fun gets called for every single request" do
-    bypass = five_requests(:expect)
-    # Override Bypass' on_exit handler
-    ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
-      :ok == Bypass.Instance.call(bypass.pid, :on_exit)
-    end)
+    five_requests(:expect)
   end
 
   test "Bypass.expect_once's fun gets called for each request, with an error reported for too many calls" do
