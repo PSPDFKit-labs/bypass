@@ -17,6 +17,8 @@ defmodule Bypass do
               :ok
             {:error, :unexpected_count, errors} ->
               raise ExUnit.AssertionError, errors
+            {:error, :disallowed_expect} ->
+              raise ExUnit.AssertionError, "Passed expect function is not a function"
             {:exit, {class, reason, stacktrace}} ->
               :erlang.raise(class, reason, stacktrace)
           end

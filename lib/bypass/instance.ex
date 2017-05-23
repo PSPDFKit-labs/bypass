@@ -42,7 +42,8 @@ defmodule Bypass.Instance do
           socket: socket,
           callers_awaiting_down: [],
           pass: false,
-          exited: nil
+          exited: nil,
+          error: nil
         }
 
         {:ok, state}
@@ -108,6 +109,7 @@ defmodule Bypass.Instance do
   defp do_handle_call(
     {expect, methods, paths, fun}, _from, %{expectations: expectations} = state)
       when expect in [:expect, :expect_once]
+      and is_function(fun, 1)
   do
     routes =
       for method <- List.wrap(methods), path <- List.wrap(paths), do: {method, path}
@@ -131,6 +133,13 @@ defmodule Bypass.Instance do
       end)
 
     {:reply, :ok, %{state | expectations: updated_expectations}}
+  end
+
+  defp do_handle_call(
+    {expect, _, _, _}, _from, state)
+      when expect in [:expect, :expect_once]
+  do
+    {:reply, :ok, %{state | error: :disallowed_expect}}
   end
 
   defp do_handle_call({:get_route, method, path}, _from, state) do
@@ -163,7 +172,7 @@ defmodule Bypass.Instance do
   end
 
   defp do_handle_call({:put_expect_result, _, _, {:exit, trace}}, _from, state) do
-    {:reply, :ok, Map.put_new(state, :exited, trace)}
+    {:reply, :ok, %{state | exited: trace}}
   end
 
   defp do_handle_call({:put_expect_result, route, ref, result}, _from, state) do
@@ -173,7 +182,7 @@ defmodule Bypass.Instance do
     {:reply, :ok, updated_state}
   end
 
-  defp do_handle_call(:on_exit, _from, %{exited: exited} = state) do
+  defp do_handle_call(:on_exit, _from, %{exited: exited, error: error} = state) do
     updated_state =
       case state do
         %{socket: nil} -> state
@@ -188,6 +197,8 @@ defmodule Bypass.Instance do
           :ok
         exited ->
           {:exit, exited}
+        error ->
+          {:error, error}
         true ->
           case expectation_problem_messages(state.expectations) do
             [] -> :ok

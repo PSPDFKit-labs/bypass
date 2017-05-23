@@ -130,11 +130,13 @@ defmodule BypassTest do
     end)
   end
 
-  test "Bypass.expect can be canceled by expecting nil" do
+  # no longer allowing `nil`s as an override for a previously
+  # passed expect/handler function
+  test "passing Bypass.expect a nil raises an error" do
     :expect |> cancel
   end
 
-  test "Bypass.expect_once can be canceled by expecting nil" do
+  test "passing Bypass.expect_once a nil raises an error" do
     :expect_once |> cancel
   end
 
@@ -147,6 +149,12 @@ defmodule BypassTest do
       fn _conn -> assert false end
     ])
     Bypass.expect(bypass, nil)
+
+    # Override Bypass' on_exit handler
+    ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
+      exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
+      assert {:error, :disallowed_expect} == exit_result
+    end)
   end
 
   test "Bypass.expect can be made to pass by calling Bypass.pass" do
