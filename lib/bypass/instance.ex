@@ -107,30 +107,27 @@ defmodule Bypass.Instance do
   end
 
   defp do_handle_call(
-    {expect, methods, paths, fun}, _from, %{expectations: expectations} = state)
+    {expect, method, path, fun}, _from, %{expectations: expectations} = state)
       when expect in [:expect, :expect_once]
+      and method in ["GET", "POST", "HEAD", "PUT", "DELETE", "OPTIONS", "CONNECT", :any]
+      and (is_binary(path) or path == :any)
       and is_function(fun, 1)
   do
-    routes =
-      for method <- List.wrap(methods), path <- List.wrap(paths), do: {method, path}
+    route = {method, path}
 
     updated_expectations =
-      Enum.reduce(routes, expectations, fn {method, path} = route, current_expectations ->
-        cond do
-          fun == nil ->
-            Map.put(current_expectations, route, new_route(nil, :never))
-          Map.get(current_expectations, route, :none) == :none ->
-            Map.put(current_expectations, route, new_route(
-              fun,
-              case expect do
-                :expect -> :once_or_more
-                :expect_once -> :once
-              end
-            ))
-          true ->
-            raise ExUnit.AssertionError, "Route already installed for #{method}, #{path}"
-        end
-      end)
+      case Map.get(expectations, route, :none) do
+        :none ->
+          Map.put(expectations, route, new_route(
+            fun,
+            case expect do
+              :expect -> :once_or_more
+              :expect_once -> :once
+            end
+          ))
+        _ ->
+          raise ExUnit.AssertionError, "Route already installed for #{method}, #{path}"
+      end
 
     {:reply, :ok, %{state | expectations: updated_expectations}}
   end
@@ -139,7 +136,7 @@ defmodule Bypass.Instance do
     {expect, _, _, _}, _from, state)
       when expect in [:expect, :expect_once]
   do
-    {:reply, :ok, %{state | error: :disallowed_expect}}
+    raise ExUnit.AssertionError, "Route for #{expect} does not conform to specification"
   end
 
   defp do_handle_call({:get_route, method, path}, _from, state) do

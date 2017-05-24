@@ -130,33 +130,6 @@ defmodule BypassTest do
     end)
   end
 
-  # no longer allowing `nil`s as an override for a previously
-  # passed expect/handler function
-  test "passing Bypass.expect a nil raises an error" do
-    :expect |> cancel
-  end
-
-  test "passing Bypass.expect_once a nil raises an error" do
-    :expect_once |> cancel
-  end
-
-  defp cancel(expect_fun) do
-    bypass = Bypass.open
-
-    # one of Bypass.expect or Bypass.expect_once
-    apply(Bypass, expect_fun, [
-      bypass,
-      fn _conn -> assert false end
-    ])
-    Bypass.expect(bypass, nil)
-
-    # Override Bypass' on_exit handler
-    ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
-      exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
-      assert {:error, :disallowed_expect} == exit_result
-    end)
-  end
-
   test "Bypass.expect can be made to pass by calling Bypass.pass" do
     :expect |> pass
   end
@@ -360,65 +333,6 @@ defmodule BypassTest do
     end
   end
 
-  test "Bypass.expect/4 can be used to define multiple paths" do
-    :expect |> multiple_paths
-  end
-
-  test "Bypass.expect_once/4 can be used to define multiple paths" do
-    :expect_once |> multiple_paths
-  end
-
-  defp multiple_paths(expect_fun) do
-    bypass = Bypass.open
-    method = "POST"
-    paths = ["/this", "/that"]
-
-    # one of Bypass.expect or Bypass.expect_once
-    apply(Bypass, expect_fun, [
-      bypass, method, paths, fn conn ->
-        assert conn.method == method
-        assert Enum.any?(paths, fn path -> conn.request_path == path end)
-        Plug.Conn.send_resp(conn, 200, "")
-      end
-    ])
-
-    capture_log fn ->
-      Enum.each(paths, fn path ->
-        assert {:ok, 200, ""} = request(bypass.port, path)
-      end)
-    end
-  end
-
-  test "Bypass.expect/4 can be used to define multiple methods" do
-    :expect |> multiple_methods
-  end
-
-  test "Bypass.expect_once/4 can be used to define multiple methods" do
-    :expect_once |> multiple_methods
-  end
-
-  defp multiple_methods(expect_fun) do
-    bypass = Bypass.open
-    methods = ["POST", "GET"]
-    path = "/this"
-
-    # one of Bypass.expect or Bypass.expect_once
-    apply(Bypass, expect_fun, [
-      bypass, methods, path, fn conn ->
-        assert Enum.any?(methods, fn method -> conn.method == method end)
-        assert conn.request_path == path
-        Plug.Conn.send_resp(conn, 200, "")
-      end
-    ])
-
-    capture_log fn ->
-      Enum.each(methods, fn method ->
-        assert {:ok, 200, ""} =
-          request(bypass.port, path, method |> String.downcase |> String.to_atom)
-      end)
-    end
-  end
-
   test "All routes to a Bypass.expect/4 call must be called" do
     :expect |> all_routes_must_be_called
   end
@@ -432,14 +346,16 @@ defmodule BypassTest do
     method = "POST"
     paths = ["/this", "/that"]
 
-    # one of Bypass.expect or Bypass.expect_once
-    apply(Bypass, expect_fun, [
-      bypass, method, paths, fn conn ->
-        assert conn.method == method
-        assert Enum.any?(paths, fn path -> conn.request_path == path end)
-        Plug.Conn.send_resp(conn, 200, "")
-      end
-    ])
+    Enum.each(paths, fn path ->
+      # one of Bypass.expect or Bypass.expect_once
+      apply(Bypass, expect_fun, [
+        bypass, method, path, fn conn ->
+          assert conn.method == method
+          assert Enum.any?(paths, fn path -> conn.request_path == path end)
+          Plug.Conn.send_resp(conn, 200, "")
+        end
+      ])
+    end)
 
     capture_log fn ->
       assert {:ok, 200, ""} = request(bypass.port, "/this")
