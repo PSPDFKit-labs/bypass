@@ -140,6 +140,18 @@ defmodule BypassTest do
     assert_received ^ref
   end
 
+  test "on_exit handler when the request hasn't finished" do
+    bypass = Bypass.open
+    Bypass.expect bypass, fn conn ->
+      result = Plug.Conn.send_resp(conn, 200, "")
+      :timer.sleep(200)
+      result
+    end
+    assert {:ok, 200, ""} = request(bypass.port)
+    # on_exit should wait for the response, rather that saying the request
+    # wasn't made.
+  end
+
   @doc ~S"""
   Open a new HTTP connection and perform the request. We don't want to use httpc, hackney or another
   "high-level" HTTP client, since they do connection pooling and we will sometimes get a connection
