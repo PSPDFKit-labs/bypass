@@ -42,7 +42,7 @@ the socket updates its state.
 
 You can take any of the following approaches:
 * `expect/2` or `expect_once/2` to install a generic function that all calls to bypass will use
-* `expect/4` and/or `expect_once/4` to install specific routes (method, path combinations)
+* `expect/4` and/or `expect_once/4` to install specific routes (method and path)
 * a combination of the above, where the routes will be used first, and then the generic version
   will be used as default
 
