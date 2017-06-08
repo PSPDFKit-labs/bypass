@@ -48,8 +48,7 @@ You can take any of the following approaches:
 
 #### expect/2 (bypass_instance, function)
 
-Must be called at least once, and it will error if not.  As an alternative, `nil` can be passed
-in place of a function to indicate that it should never be called (and it will error if it is).
+Must be called at least once.
 
 ```elixir
   Bypass.expect bypass, fn conn ->
@@ -61,8 +60,7 @@ in place of a function to indicate that it should never be called (and it will e
 
 #### expect_once/2 (bypass_instance, function)
 
-Must be called exactly once, and it will error if not. As an alternative, `nil` can be passed
-in place of a function to indicate that it should never be called (and it will error if it is)
+Must be called exactly once.
 
 ```elixir
   Bypass.expect_once bypass, fn conn ->
@@ -72,13 +70,13 @@ in place of a function to indicate that it should never be called (and it will e
   end
 ```
 
-#### expect/4 (bypass_instance, method | [method1, method2...], path | [path1, path2...], function)
+#### expect/4 (bypass_instance, method, path, function)
 
-Must be called at least once, and it will error if not.  As an alternative, `nil` can be passed
-in place of a function to indicate that it should never be called (and it will error if it is).
+Must be called at least once.
 
-The methods can be passed as a binary or a `List` of binaries, and the paths can also be passed in
-that way.  All combinations will be required to be called.
+`method` is one of `["GET", "POST", "HEAD", "PUT", "DELETE", "OPTIONS", "CONNECT"]`
+
+`path` is the endpoint.
 
 ```elixir
   Bypass.expect bypass, "POST", "/1.1/statuses/update.json", fn conn ->
@@ -87,13 +85,13 @@ that way.  All combinations will be required to be called.
   end
 ```
 
-#### expect_once/4 (bypass_instance, method | [method1, method2...], path | [path1, path2...], function)
+#### expect_once/4 (bypass_instance, method, path, function)
 
-Must be called exactly once, and it will error if not. As an alternative, `nil` can be passed
-in place of a function to indicate that it should never be called (and it will error if it is).
+Must be called exactly once.
 
-The methods can be passed as a binary or a `List` of binaries, and the paths can also be passed in
-that way.  All combinations will be required to be called.
+`method` is one of `["GET", "POST", "HEAD", "PUT", "DELETE", "OPTIONS", "CONNECT"]`
+
+`path` is the endpoint.
 
 ```elixir
   Bypass.expect_once bypass, "POST", "/1.1/statuses/update.json", fn conn ->
@@ -120,7 +118,6 @@ defmodule TwitterClientTest do
     Bypass.expect_once bypass, "POST", "/1.1/statuses/update.json", fn conn ->
       Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
     end
-    Bypass.expect bypass, nil # ensure that no other API endpoints are called
     {:ok, client} = TwitterClient.start_link(url: endpoint_url(bypass.port))
     assert {:error, :rate_limited} == TwitterClient.post_tweet(client, "Elixir is awesome!")
   end
