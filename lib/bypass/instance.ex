@@ -137,7 +137,7 @@ defmodule Bypass.Instance do
     end
   end
 
-  defp do_handle_call({expect, _, _, _}, _from, state)
+  defp do_handle_call({expect, _, _, _}, _from, _state)
     when expect in [:expect, :expect_once]
   do
     raise "Route for #{expect} does not conform to specification"
