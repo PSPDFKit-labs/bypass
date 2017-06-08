@@ -14,38 +14,6 @@ defmodule BypassTest do
     end
   end
 
-  test "Bypass.expect's fun gets called for every single request" do
-    five_requests(:expect)
-  end
-
-  test "Bypass.expect_once's fun gets called for each request, with an error reported for too many calls" do
-    bypass = five_requests(:expect_once)
-    # Override Bypass' on_exit handler
-    ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
-      exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
-      assert {:error, :unexpected_count, _} = exit_result
-      assert Regex.match?(~r/passed function.+called 5 times/, elem(exit_result, 2))
-    end)
-  end
-
-  defp five_requests(expect_fun) do
-    bypass = Bypass.open
-    parent = self()
-    # one of Bypass.expect or Bypass.expect_once
-    apply(Bypass, expect_fun, [
-      bypass,
-      fn conn ->
-        send(parent, :request_received)
-        Plug.Conn.send_resp(conn, 200, "")
-      end
-    ])
-    Enum.each(1..5, fn _ ->
-      assert {:ok, 200, ""} = request(bypass.port)
-      assert_receive :request_received
-    end)
-    bypass
-  end
-
   test "Bypass.open can specify a port to operate on with expect" do
     1234 |> specify_port(:expect)
   end
@@ -125,8 +93,7 @@ defmodule BypassTest do
     # Override Bypass' on_exit handler
     ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
       exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
-      assert {:error, :unexpected_count, _} = exit_result
-      assert Regex.match?(~r/called 0 times/, elem(exit_result, 2))
+      assert {:error, :no_request, {:any, :any}} = exit_result
     end)
   end
 
@@ -211,7 +178,7 @@ defmodule BypassTest do
     assert_received ^ref
   end
 
-  test "Conrrent calls to down" do
+  test "Concurrent calls to down" do
     test_process = self()
     ref = make_ref()
     bypass = Bypass.open
@@ -263,13 +230,27 @@ defmodule BypassTest do
     # Override Bypass' on_exit handler
     ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
       exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
-      assert {:error, :unexpected_count, _} = exit_result
-      assert Regex.match?(~r/to never be called.+called 1 time/, elem(exit_result, 2))
+      assert {:error, :unexpected_request, {:any, :any}} = exit_result
     end)
   end
 
   test "Bypass can handle concurrent requests with expect" do
-    bypass = concurrent_requests(:expect)
+    bypass = Bypass.open
+    parent = self()
+
+    Bypass.expect(bypass, fn conn ->
+        send(parent, :request_received)
+        Plug.Conn.send_resp(conn, 200, "")
+      end
+    )
+    tasks = Enum.map(1..5, fn _ ->
+      Task.async(fn -> {:ok, 200, ""} = request(bypass.port) end)
+    end)
+    Enum.map(tasks, fn task ->
+      Task.await(task)
+      assert_receive :request_received
+    end)
+
     # Override Bypass' on_exit handler
     ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
       :ok == Bypass.Instance.call(bypass.pid, :on_exit)
@@ -277,18 +258,31 @@ defmodule BypassTest do
   end
 
   test "Bypass can handle concurrent requests with expect_once" do
-    bypass = concurrent_requests(:expect_once)
+    bypass = Bypass.open
+    parent = self()
+
+    Bypass.expect_once(bypass, fn conn ->
+      send(parent, :request_received)
+      Plug.Conn.send_resp(conn, 200, "")
+    end)
+
+    Enum.map(1..5, fn _ -> Task.async(fn -> request(bypass.port) end) end)
+    |> Enum.map(fn task -> Task.await(task) end)
+
+    assert_receive :request_received
+    refute_receive :request_received
+
     # Override Bypass' on_exit handler
     ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
       exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
-      assert {:error, :unexpected_count, _} = exit_result
-      assert Regex.match?(~r/passed function.+called 5 times/, elem(exit_result, 2))
+      assert {:error, :too_many_requests, {:any, :any}} = exit_result
     end)
   end
 
   defp concurrent_requests(expect_fun) do
     bypass = Bypass.open
     parent = self()
+
     apply(Bypass, expect_fun, [
       bypass,
       fn conn ->
@@ -364,8 +358,7 @@ defmodule BypassTest do
     # Override Bypass' on_exit handler
     ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
       exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
-      assert {:error, :unexpected_count, _} = exit_result
-      assert Regex.match?(~r/POST.+\/that.+called 0 times/, elem(exit_result, 2))
+      assert {:error, :no_request, {"POST", "/that"}} = exit_result
     end)
   end
 
@@ -374,7 +367,7 @@ defmodule BypassTest do
   "high-level" HTTP client, since they do connection pooling and we will sometimes get a connection
   closed error and not a failed to connect error, when we test Bypass.down
   """
-  def request(port, path \\ "", method \\ :post) do
+  def request(port, path \\ "/example_path", method \\ :post) do
     {:ok, conn} = :gun.start_link(self(), '127.0.0.1', port, %{retry: 0})
     try do
       case :gun.await_up(conn, 250) do

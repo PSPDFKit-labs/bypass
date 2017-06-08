@@ -41,9 +41,9 @@ defmodule Bypass.Instance do
           ref: ref,
           socket: socket,
           callers_awaiting_down: [],
+          callers_awaiting_exit: [],
           pass: false,
-          exited: nil,
-          error: nil
+          unknown_route_error: nil
         }
 
         {:ok, state}
@@ -70,7 +70,7 @@ defmodule Bypass.Instance do
     updated_state =
       update_in(state[:expectations][route][:retained_plugs], fn plugs ->
         Map.update(plugs, ref, caller_pid, fn _ ->
-          raise ExUnit.AssertionError, "plug already installed for #{method} #{path}"
+          raise "plug already installed for #{method} #{path}"
         end)
       end)
 
@@ -126,17 +126,21 @@ defmodule Bypass.Instance do
             end
           ))
         _ ->
-          raise ExUnit.AssertionError, "Route already installed for #{method}, #{path}"
+          raise "Route already installed for #{method}, #{path}"
       end
 
-    {:reply, :ok, %{state | expectations: updated_expectations}}
+    case updated_expectations do
+      {:error, error_name, msg} ->
+        {:reply, {:error, error_name, msg}, state}
+      _ ->
+        {:reply, :ok, %{state | expectations: updated_expectations}}
+    end
   end
 
-  defp do_handle_call(
-    {expect, _, _, _}, _from, state)
-      when expect in [:expect, :expect_once]
+  defp do_handle_call({expect, _, _, _}, _from, state)
+    when expect in [:expect, :expect_once]
   do
-    raise ExUnit.AssertionError, "Route for #{expect} does not conform to specification"
+    raise "Route for #{expect} does not conform to specification"
   end
 
   defp do_handle_call({:get_route, method, path}, _from, state) do
@@ -151,35 +155,46 @@ defmodule Bypass.Instance do
           put_result(route, ref, :ok, plugs_acc)
         end)
       end)
-      |> dispatch_awaiting_caller()
 
     {:reply, :ok, %{updated_state | pass: true}}
   end
 
-  defp do_handle_call({:get_expect_fun, {method, path}}, _from, state) do
-    {route, route_expectations} = route_info(method, path, state)
-    case route_expectations do
+  defp do_handle_call(
+    {:get_expect_fun, {method, path} = route}, _from, %{expectations: expectations} = state
+  ) do
+    case Map.get(expectations, route) do
+      %{expected: :once, request_count: count} when count > 0 ->
+        {:reply, {:error, :too_many_requests, route}, increase_route_count(state, route)}
       nil ->
-        expectations = new_route(nil, :never)
-        updated_expectations = Map.put(state.expectations, route, expectations)
-        {:reply, expectations.fun, %{state | expectations: updated_expectations}}
-      _ ->
-        {:reply, route_expectations.fun, state}
+        {:reply, {:error, :unexpected_request, route}, state}
+      route_expectations ->
+        {:reply, route_expectations.fun, increase_route_count(state, route)}
     end
   end
 
-  defp do_handle_call({:put_expect_result, _, _, {:exit, trace}}, _from, state) do
-    {:reply, :ok, %{state | exited: trace}}
+  defp increase_route_count(state, route) do
+    update_in(state[:expectations][route],
+      fn route_expectations -> Map.update(route_expectations, :request_count, 1, &(&1 + 1)) end)
   end
 
   defp do_handle_call({:put_expect_result, route, ref, result}, _from, state) do
     updated_state =
       put_result(route, ref, result, state)
-      |> dispatch_awaiting_caller()
+      |> dispatch_awaiting_callers()
+
     {:reply, :ok, updated_state}
   end
 
-  defp do_handle_call(:on_exit, _from, %{exited: exited, error: error} = state) do
+  defp do_handle_call(:on_exit, from, %{callers_awaiting_exit: callers} = state) do
+    if retained_plugs_count(state) > 0 do
+      {:noreply, %{state | callers_awaiting_exit: [from | callers]}}
+    else
+      {result, updated_state} = do_exit(state)
+      {:stop, :normal, result, updated_state}
+    end
+  end
+
+  defp do_exit(state) do
     updated_state =
       case state do
         %{socket: nil} -> state
@@ -192,79 +207,50 @@ defmodule Bypass.Instance do
       cond do
         state.pass ->
           :ok
-        exited ->
-          {:exit, exited}
-        error ->
-          {:error, error}
+        state.unknown_route_error ->
+          state.unknown_route_error
         true ->
-          case expectation_problem_messages(state.expectations) do
-            [] -> :ok
-            messages -> {:error, :unexpected_count, Enum.join(messages, " ")}
+          case expectation_problem_message(state.expectations) do
+            nil -> :ok
+            error -> error
           end
       end
 
-    {:stop, :normal, result, updated_state}
+    {result, updated_state}
   end
 
   defp put_result(route, ref, result, state) do
-    update_in(state[:expectations][route], fn route_expectations ->
-      plugs = Map.fetch!(route_expectations, :retained_plugs)
-      Map.merge(route_expectations, %{
-        retained_plugs: Map.delete(plugs, ref),
-        results: [result | Map.fetch!(route_expectations, :results)]
-      })
-    end)
+    case get_in(state, [:expectations, route]) do
+      nil ->
+        Map.put(state, :unknown_route_error, result)
+      _ -> update_in(state[:expectations][route], fn route_expectations ->
+             plugs = Map.fetch!(route_expectations, :retained_plugs)
+             Map.merge(route_expectations, %{
+               retained_plugs: Map.delete(plugs, ref),
+               results: [result | Map.fetch!(route_expectations, :results)]
+             })
+           end)
+    end
   end
 
-  defp expectation_problem_messages(expectations) do
-    expectations
-    |> expectation_problems
-    |> Enum.map(fn {route, expectation, count} ->
-         route_id =
-           case route do
-             {:any, :any} -> case expectation do
-               :never -> "bypass"
-               _ -> "passed function"
-             end
-             {method, path} -> "#{method} #{path}"
-           end
+  defp expectation_problem_message(expectations) do
+    problem_route =
+      expectations
+      |> Enum.find(fn {route, expectations} -> length(expectations.results) == 0 end)
 
-        expectation_explanation =
-          case expectation do
-            :once -> "to be called only once"
-            :once_or_more -> "to be called at least once"
-            :never -> "to never be called"
-          end
-
-         count_problem(route_id, expectation_explanation, count)
-       end)
-  end
-
-  defp count_problem(route, expected, actual_count) do
-    times =
-      case actual_count do
-        1 -> "time"
-        _ -> "times"
-      end
-    "Expected #{route} #{expected}, called #{actual_count} #{times}"
-  end
-
-  defp expectation_problems(expectations) do
-    expectations
-    |> route_expectations_and_counts
-    |> Enum.filter(fn {_, expectation, count} ->
-         case expectation do
-           :once -> count != 1
-           :once_or_more -> count == 0
-           :never -> count > 0
-         end
-      end)
-  end
-
-  defp route_expectations_and_counts(expectations) do
-    expectations
-    |> Enum.map(fn {route, expectations} ->
-         {route, expectations.expected, length(expectations.results)} end)
+    case problem_route do
+      {route, _} -> {:error, :no_request, route}
+      nil -> Enum.reduce_while(expectations, nil, fn {route, route_expectations}, _ ->
+               first_error = Enum.find(route_expectations.results, fn
+                 result when is_tuple(result) -> result
+                 result -> nil
+               end)
+               case first_error do
+                 nil -> {:cont, nil}
+                 error -> {:halt, error}
+               end
+             end)
+    end
   end
 
   defp route_info(method, path, %{expectations: expectations} = _state) do
@@ -300,13 +286,24 @@ defmodule Bypass.Instance do
     end
   end
 
-  defp dispatch_awaiting_caller(
-    %{callers_awaiting_down: callers, socket: socket, ref: ref} = state)
-  do
-    if retained_plugs_count(state) == 0 and length(callers) > 0 do
-      do_down(ref, socket)
-      Enum.each(callers, &(GenServer.reply(&1, :ok)))
-      %{state | socket: nil, callers_awaiting_down: []}
+  defp dispatch_awaiting_callers(%{callers_awaiting_down: down_callers,
+    callers_awaiting_exit: exit_callers, socket: socket, ref: ref} = state) do
+
+    if retained_plugs_count(state) == 0 do
+      down_reset =
+        if length(down_callers) > 0 do
+          do_down(ref, socket)
+          Enum.each(down_callers, &(GenServer.reply(&1, :ok)))
+          %{state | socket: nil, callers_awaiting_down: []}
+        end
+
+      if length(exit_callers) > 0 do
+        {result, updated_state} = do_exit(state)
+        Enum.each(exit_callers, &(GenServer.reply(&1, result)))
+        GenServer.stop(:normal)
+      end
+
+      down_reset || state
     else
       state
     end
@@ -325,6 +322,7 @@ defmodule Bypass.Instance do
       expected: expected,
       retained_plugs: %{},
       results: [],
+      request_count: 0
     }
   end
 end

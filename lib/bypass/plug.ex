@@ -19,9 +19,9 @@ defmodule Bypass.Plug do
             put_result(pid, route, ref, {:exit, {class, reason, stacktrace}})
             :erlang.raise(class, reason, stacktrace)
         end
-      nil ->
-        put_result(pid, route, ref, {:error, :unexpected_request})
-        conn
+      {:error, error, route} ->
+        put_result(pid, route, ref, {:error, error, route})
+        raise "Route error"
     end
   end
 
