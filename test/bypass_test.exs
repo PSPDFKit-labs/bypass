@@ -279,27 +279,6 @@ defmodule BypassTest do
     end)
   end
 
-  defp concurrent_requests(expect_fun) do
-    bypass = Bypass.open
-    parent = self()
-
-    apply(Bypass, expect_fun, [
-      bypass,
-      fn conn ->
-        send(parent, :request_received)
-        Plug.Conn.send_resp(conn, 200, "")
-      end
-    ])
-    tasks = Enum.map(1..5, fn _ ->
-      Task.async(fn -> {:ok, 200, ""} = request(bypass.port) end)
-    end)
-    Enum.map(tasks, fn task ->
-      Task.await(task)
-      assert_receive :request_received
-    end)
-    bypass
-  end
-
   test "Bypass.expect/4 can be used to define a specific route" do
     :expect |> specific_route
   end

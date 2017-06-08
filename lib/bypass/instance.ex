@@ -160,7 +160,7 @@ defmodule Bypass.Instance do
   end
 
   defp do_handle_call(
-    {:get_expect_fun, {method, path} = route}, _from, %{expectations: expectations} = state
+    {:get_expect_fun, route}, _from, %{expectations: expectations} = state
   ) do
     case Map.get(expectations, route) do
       %{expected: :once, request_count: count} when count > 0 ->
@@ -236,14 +236,14 @@ defmodule Bypass.Instance do
   defp expectation_problem_message(expectations) do
     problem_route =
       expectations
-      |> Enum.find(fn {route, expectations} -> length(expectations.results) == 0 end)
+      |> Enum.find(fn {_route, expectations} -> length(expectations.results) == 0 end)
 
     case problem_route do
       {route, _} -> {:error, :no_request, route}
-      nil -> Enum.reduce_while(expectations, nil, fn {route, route_expectations}, _ ->
+      nil -> Enum.reduce_while(expectations, nil, fn {_route, route_expectations}, _ ->
                first_error = Enum.find(route_expectations.results, fn
                  result when is_tuple(result) -> result
-                 result -> nil
+                 _result -> nil
                end)
                case first_error do
                  nil -> {:cont, nil}
