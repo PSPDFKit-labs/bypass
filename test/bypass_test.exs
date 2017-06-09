@@ -75,14 +75,14 @@ defmodule BypassTest do
   end
 
   test "Bypass.expect raises if no request is made" do
-    :expect |> no_request
+    :expect |> not_called
   end
 
   test "Bypass.expect_once raises if no request is made" do
-    :expect_once |> no_request
+    :expect_once |> not_called
   end
 
-  defp no_request(expect_fun) do
+  defp not_called(expect_fun) do
     bypass = Bypass.open
 
     # one of Bypass.expect or Bypass.expect_once
@@ -93,7 +93,7 @@ defmodule BypassTest do
     # Override Bypass' on_exit handler
     ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
       exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
-      assert {:error, :no_request, {:any, :any}} = exit_result
+      assert {:error, :not_called, {:any, :any}} = exit_result
     end)
   end
 
@@ -221,6 +221,7 @@ defmodule BypassTest do
     end)
   end
 
+  @tag :wip
   test "Calling a bypass route without expecting a call fails the test" do
     bypass = Bypass.open
     capture_log fn ->
@@ -337,7 +338,7 @@ defmodule BypassTest do
     # Override Bypass' on_exit handler
     ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
       exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
-      assert {:error, :no_request, {"POST", "/that"}} = exit_result
+      assert {:error, :not_called, {"POST", "/that"}} = exit_result
     end)
   end
 

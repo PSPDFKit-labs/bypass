@@ -15,10 +15,20 @@ defmodule Bypass do
               :ok
             :ok_call ->
               :ok
-            {:error, :unexpected_count, errors} ->
-              raise ExUnit.AssertionError, errors
-            {:error, :disallowed_expect} ->
-              raise ExUnit.AssertionError, "Passed expect function is not a function"
+            {:error, :too_many_requests, {:any, :any}} ->
+              raise ExUnit.AssertionError, "Expected only one HTTP request for Bypass"
+            {:error, :too_many_requests, {method, path}} ->
+              raise ExUnit.AssertionError, "Expected only one HTTP request for Bypass at #{method} #{path}"
+            {:error, :unexpected_request, {:any, :any}} ->
+              raise ExUnit.AssertionError, "Bypass got an HTTP request but wasn't expecting one"
+            {:error, :unexpected_request, {method, path}} ->
+              raise ExUnit.AssertionError,
+                "Bypass got an HTTP request but wasn't expecting one at #{method} #{path}"
+            {:error, :not_called, {:any, :any}} ->
+              raise ExUnit.AssertionError, "No HTTP request arrived at Bypass"
+            {:error, :not_called, {method, path}} ->
+              raise ExUnit.AssertionError,
+                "No HTTP request arrived at Bypass at #{method} #{path}"
             {:exit, {class, reason, stacktrace}} ->
               :erlang.raise(class, reason, stacktrace)
           end

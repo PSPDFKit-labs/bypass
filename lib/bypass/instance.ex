@@ -129,12 +129,7 @@ defmodule Bypass.Instance do
           raise "Route already installed for #{method}, #{path}"
       end
 
-    case updated_expectations do
-      {:error, error_name, msg} ->
-        {:reply, {:error, error_name, msg}, state}
-      _ ->
-        {:reply, :ok, %{state | expectations: updated_expectations}}
-    end
+    {:reply, :ok, %{state | expectations: updated_expectations}}
   end
 
   defp do_handle_call({expect, _, _, _}, _from, _state)
@@ -239,7 +234,7 @@ defmodule Bypass.Instance do
       |> Enum.find(fn {_route, expectations} -> length(expectations.results) == 0 end)
 
     case problem_route do
-      {route, _} -> {:error, :no_request, route}
+      {route, _} -> {:error, :not_called, route}
       nil -> Enum.reduce_while(expectations, nil, fn {_route, route_expectations}, _ ->
                first_error = Enum.find(route_expectations.results, fn
                  result when is_tuple(result) -> result
