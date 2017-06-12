@@ -110,3 +110,13 @@ config :bypass, enable_debug_log: true
 ## License
 
 This software is licensed under [the MIT license](LICENSE).
+
+## About
+
+<a href="https://pspdfkit.com/">
+  <img src="https://avatars2.githubusercontent.com/u/1527679?v=3&s=200" height="80" />
+</a>
+
+This project is maintained and funded by [PSPDFKit](https://pspdfkit.com/).
+
+See [our other open source projects](https://github.com/PSPDFKit-labs), read [our blog](https://pspdfkit.com/blog/) or say hello on Twitter ([@PSPDFKit](https://twitter.com/pspdfkit)).
