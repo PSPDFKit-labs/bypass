@@ -1,13 +1,11 @@
 language: elixir
 elixir:
-  - 1.0.5
-  - 1.1.1
-  - 1.2.5
-  - 1.3.2
-  - 1.4.1
+  - 1.3.4
+  - 1.4.5
 otp_release:
   - 18.3
-  - 19.0
+  - 19.3
+  - 20.0
 sudo: false # to use faster container based build environment
 env:
   - MIX_ENV=test
@@ -19,9 +17,5 @@ script:
   - mix test
 matrix:
   exclude:
-    - otp_release: 19.0
-      elixir: 1.0.5
-    - otp_release: 19.0
-      elixir: 1.1.1
-    - otp_release: 19.0
-      elixir: 1.2.5
+    - otp_release: 20.0
+      elixir: 1.3.4
