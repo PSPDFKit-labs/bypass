@@ -10,6 +10,7 @@ defmodule Bypass do
         port = Bypass.Instance.call(pid, :port)
         debug_log "Did open connection #{inspect pid} on port #{inspect port}"
         ExUnit.Callbacks.on_exit({Bypass, pid}, fn ->
+          _ = Bypass.Instance.call(pid, :down)
           case Bypass.Instance.call(pid, :on_exit) do
             :ok ->
               :ok
