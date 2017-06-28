@@ -167,11 +167,6 @@ defmodule Bypass.Instance do
     end
   end
 
-  defp increase_route_count(state, route) do
-    update_in(state[:expectations][route],
-      fn route_expectations -> Map.update(route_expectations, :request_count, 1, &(&1 + 1)) end)
-  end
-
   defp do_handle_call({:put_expect_result, route, ref, result}, _from, state) do
     updated_state =
       put_result(route, ref, result, state)
@@ -198,7 +193,7 @@ defmodule Bypass.Instance do
           %{state | socket: nil}
       end
 
-    result = 
+    result =
       cond do
         state.pass ->
           :ok
@@ -226,6 +221,11 @@ defmodule Bypass.Instance do
              })
            end)
     end
+  end
+
+  defp increase_route_count(state, route) do
+    update_in(state[:expectations][route],
+      fn route_expectations -> Map.update(route_expectations, :request_count, 1, &(&1 + 1)) end)
   end
 
   defp expectation_problem_message(expectations) do
@@ -293,7 +293,7 @@ defmodule Bypass.Instance do
         end
 
       if length(exit_callers) > 0 do
-        {result, updated_state} = do_exit(state)
+        {result, _updated_state} = do_exit(state)
         Enum.each(exit_callers, &(GenServer.reply(&1, result)))
         GenServer.stop(:normal)
       end
