@@ -33,10 +33,10 @@ defmodule Bypass do
   if Code.ensure_loaded?(ESpec) do
     def verify_expectations(:espec, bypass) do
       do_verify_expectations(bypass.pid, ESpec.AssertionError)
-    end
-  else
-    def verify_expectations(_framework, _bypass), do: nil
+    end    
   end
+
+  def verify_expectations(_framework, _bypass), do: nil
 
 
   defp do_verify_expectations(bypass_pid, error_module) do
