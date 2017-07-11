@@ -1,10 +1,24 @@
 defmodule Bypass do
+  @moduledoc """
+  Bypass provides a quick way to create a custom plug that can be put
+  in place instead of an actual HTTP server to return prebaked responses
+  to client requests.
+
+  This module is the main interface to the library.
+  """
+
   defstruct pid: nil, port: nil
 
   import Bypass.Utils
   require Logger
 
+  @doc """
+  Starts an Elixir process running a minimal Plug app. The process
+  is a HTTP handler and listens to requests on a TPC port on localhost.
 
+  Use the other functions in this module to declare which requests are
+  handled and set expectations on the calls.
+  """
   def open(opts \\ []) do
     case Supervisor.start_child(Bypass.Supervisor, [opts]) do
       {:ok, pid} ->
@@ -23,7 +37,7 @@ defmodule Bypass do
   #
   defp setup_framework_integration(:ex_unit, bypass = %{pid: pid}) do
     ExUnit.Callbacks.on_exit({Bypass, pid}, fn ->
-      verify_expectations(:ex_unit, bypass) 
+      verify_expectations!(:ex_unit, bypass) 
     end)
   end
 
@@ -32,16 +46,22 @@ defmodule Bypass do
   end
 
 
-  def verify_expectations(bypass) do
-    verify_expectations(test_framework(), bypass)
+  @doc """
+  Can be called to immediately verify if the declared request
+  expectations have been met.
+
+  Returns `:ok` on success and raises an error on failure.
+  """
+  def verify_expectations!(bypass) do
+    verify_expectations!(test_framework(), bypass)
   end
 
-  defp verify_expectations(:ex_unit, bypass) do
+  defp verify_expectations!(:ex_unit, bypass) do
     do_verify_expectations(bypass.pid, ExUnit.AssertionError)
   end  
 
   if Code.ensure_loaded?(ESpec) do
-    defp verify_expectations(:espec, bypass) do
+    defp verify_expectations!(:espec, bypass) do
       do_verify_expectations(bypass.pid, ESpec.AssertionError)
     end    
   end

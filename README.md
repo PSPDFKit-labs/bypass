@@ -168,7 +168,7 @@ While Bypass primary targets ExUnit, as it's the official Elixir builtin test fr
 
 1. In your Mix config file, you must declare which test framework Bypass is being used with (defaults to `:ex_unit`). This simply disables the automatic integration with some hooks provided by `ExUnit`.
 ```elixir
-config :bypass, framework: :expec
+config :bypass, framework: :espec
 ```
 
 2. In your specs, you must explicitly verify the declared expectations. You can do it in the `finally` block.
@@ -183,7 +183,7 @@ defmodule TwitterClientSpec do
   end
 
   finally do
-    Bypass.verify_expectations(shared.bypass)
+    Bypass.verify_expectations!(shared.bypass)
   end
 
   specify "the client can handle an error response" do
