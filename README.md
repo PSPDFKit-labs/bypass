@@ -164,7 +164,14 @@ bypass = Bypass.open(port: 1234)
 
 ## How to use with ESpec
 
-While Bypass primary targets ExUnit, as it's the official Elixir builtin test framework, it can also be used with [ESpec](https://hex.pm/packages/espec). The test configuration is basically the same, and the only difference is that you must explicitly call the function to verify the expectations in the `finally` block.
+While Bypass primary targets ExUnit, as it's the official Elixir builtin test framework, it can also be used with [ESpec](https://hex.pm/packages/espec). The test configuration is basically the same and the are only two differences:
+
+1. In your Mix config file, you must declare which test framework Bypass is being used with (defaults to `:ex_unit`). This simply disables the automatic integration with some hooks provided by `ExUnit`.
+```elixir
+config :bypass, framework: :expec
+```
+
+2. In your specs, you must explicitly verify the declared expectations. You can do it in the `finally` block.
 
 ```elixir
 defmodule TwitterClientSpec do
@@ -176,7 +183,7 @@ defmodule TwitterClientSpec do
   end
 
   finally do
-    Bypass.verify_expectations(:espec, shared.bypass)
+    Bypass.verify_expectations(shared.bypass)
   end
 
   specify "the client can handle an error response" do

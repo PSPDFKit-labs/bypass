@@ -6,37 +6,45 @@ defmodule Bypass do
 
 
   def open(opts \\ []) do
-    open(:ex_unit, opts)
-  end
-
-  def open(framework, opts) do
     case Supervisor.start_child(Bypass.Supervisor, [opts]) do
       {:ok, pid} ->
         port = Bypass.Instance.call(pid, :port)
         debug_log "Did open connection #{inspect pid} on port #{inspect port}"
-        setup_expectations_verifications(framework, pid)
-        %Bypass{pid: pid, port: port}
+        bypass = %Bypass{pid: pid, port: port}
+        setup_framework_integration(test_framework(), bypass)
+        bypass
       other ->
         other
     end
   end
 
-  defp setup_expectations_verifications(:ex_unit, pid) do
+
+  # Raise an error if called with an unknown framework
+  #
+  defp setup_framework_integration(:ex_unit, bypass = %{pid: pid}) do
     ExUnit.Callbacks.on_exit({Bypass, pid}, fn ->
-      do_verify_expectations(pid, ExUnit.AssertionError)
+      verify_expectations(:ex_unit, bypass) 
     end)
   end
 
-  defp setup_expectations_verifications(_framework, _pid), do: nil
+  defp setup_framework_integration(:espec, _bypass) do
+    # Entry point for more advanced ESpec configurations
+  end
 
+
+  def verify_expectations(bypass) do
+    verify_expectations(test_framework(), bypass)
+  end
+
+  defp verify_expectations(:ex_unit, bypass) do
+    do_verify_expectations(bypass.pid, ExUnit.AssertionError)
+  end  
 
   if Code.ensure_loaded?(ESpec) do
-    def verify_expectations(:espec, bypass) do
+    defp verify_expectations(:espec, bypass) do
       do_verify_expectations(bypass.pid, ESpec.AssertionError)
     end    
   end
-
-  def verify_expectations(_framework, _bypass), do: nil
 
 
   defp do_verify_expectations(bypass_pid, error_module) do
@@ -86,4 +94,8 @@ defmodule Bypass do
   def pass(%Bypass{pid: pid}),
     do: Bypass.Instance.call(pid, :pass)
 
+
+  defp test_framework do
+    Application.get_env(:bypass, :framework, :ex_unit)
+  end
 end
