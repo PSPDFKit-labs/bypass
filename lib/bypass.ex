@@ -56,7 +56,7 @@ defmodule Bypass do
     verify_expectations!(test_framework(), bypass)
   end
 
-  defp verify_expectations!(:ex_unit, bypass) do
+  defp verify_expectations!(:ex_unit, _bypass) do
     raise "Not available in ExUnit, as it's det automatically."
   end  
 
