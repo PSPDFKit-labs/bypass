@@ -381,4 +381,71 @@ defmodule BypassTest do
       assert_receive {:DOWN, ^monitor, :process, ^conn, _}
     end
   end
+
+
+  defp prepare_stubs do
+    bypass = Bypass.open
+  
+    Bypass.expect_once(bypass, fn conn ->
+      Plug.Conn.send_resp(conn, 200, "")
+    end)
+
+    Bypass.expect_once(bypass, "GET", "/foo", fn conn ->
+      Plug.Conn.send_resp(conn, 200, "")
+    end)
+
+    bypass
+  end
+
+  test "Bypass.verify_expectations! - with ExUnit it will raise an exception" do
+    bypass = Bypass.open
+    Bypass.expect_once(bypass, fn conn ->
+      Plug.Conn.send_resp(conn, 200, "")
+    end)
+
+    assert {:ok, 200, ""} = request(bypass.port)
+
+    assert_raise RuntimeError, "Not available in ExUnit, as it's det automatically.", fn ->
+      Bypass.verify_expectations!(bypass)
+    end
+  end
+
+
+  test "Bypass.verify_expectations! - with ESpec it will check if the expectations are being met" do
+    Mix.Config.persist bypass: [framework: :espec]
+
+    # Fail: no requests
+    bypass = prepare_stubs()
+    assert_raise ESpec.AssertionError, "No HTTP request arrived at Bypass", fn ->
+      Bypass.verify_expectations!(bypass)
+    end
+
+    # Success
+    bypass = prepare_stubs()
+    assert {:ok, 200, ""} = request(bypass.port)
+    assert {:ok, 200, ""} = request(bypass.port, "/foo", :get)
+    assert :ok = Bypass.verify_expectations!(bypass)
+
+
+    # Fail: no requests on a single stub
+    bypass = prepare_stubs()
+    assert {:ok, 200, ""} = request(bypass.port)
+    assert_raise ESpec.AssertionError, "No HTTP request arrived at Bypass at GET /foo", fn ->
+      Bypass.verify_expectations!(bypass)
+    end
+
+    # Fail: too many requests
+    bypass = prepare_stubs()
+    assert {:ok, 200, ""} = request(bypass.port)
+    Task.start fn ->
+      assert {:ok, 200, ""} = request(bypass.port)
+    end
+    assert {:ok, 200, ""} = request(bypass.port, "/foo", :get)
+    :timer.sleep(10)
+    assert_raise ESpec.AssertionError, "Expected only one HTTP request for Bypass", fn ->
+      Bypass.verify_expectations!(bypass)
+    end
+
+    Mix.Config.persist bypass: [framework: :ex_unit]
+  end
 end

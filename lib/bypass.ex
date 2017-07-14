@@ -37,7 +37,7 @@ defmodule Bypass do
   #
   defp setup_framework_integration(:ex_unit, bypass = %{pid: pid}) do
     ExUnit.Callbacks.on_exit({Bypass, pid}, fn ->
-      verify_expectations!(:ex_unit, bypass) 
+      do_verify_expectations(bypass.pid, ExUnit.AssertionError)
     end)
   end
 
@@ -57,7 +57,7 @@ defmodule Bypass do
   end
 
   defp verify_expectations!(:ex_unit, bypass) do
-    do_verify_expectations(bypass.pid, ExUnit.AssertionError)
+    raise "Not available in ExUnit, as it's det automatically."
   end  
 
   if Code.ensure_loaded?(ESpec) do
