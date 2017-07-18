@@ -412,7 +412,7 @@ defmodule BypassTest do
 
 
   test "Bypass.verify_expectations! - with ESpec it will check if the expectations are being met" do
-    Mix.Config.persist bypass: [framework: :espec]
+    Mix.Config.persist bypass: [test_framework: :espec]
 
     # Fail: no requests
     bypass = prepare_stubs()
@@ -446,6 +446,6 @@ defmodule BypassTest do
       Bypass.verify_expectations!(bypass)
     end
 
-    Mix.Config.persist bypass: [framework: :ex_unit]
+    Mix.Config.persist bypass: [test_framework: :ex_unit]
   end
 end

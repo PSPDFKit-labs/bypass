@@ -116,6 +116,6 @@ defmodule Bypass do
 
 
   defp test_framework do
-    Application.get_env(:bypass, :framework, :ex_unit)
+    Application.get_env(:bypass, :test_framework, :ex_unit)
   end
 end

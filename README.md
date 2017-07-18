@@ -169,7 +169,7 @@ While Bypass primarily targets ExUnit, the official Elixir builtin test framewor
 1. In your Mix config file, you must declare which test framework Bypass is being used with (defaults to `:ex_unit`). This simply disables the automatic integration with some hooks provided by `ExUnit`.
 
 ```elixir
-config :bypass, framework: :espec
+config :bypass, test_framework: :espec
 ```
 
 2. In your specs, you must explicitly verify the declared expectations. You can do it in the `finally` block.
