@@ -405,7 +405,7 @@ defmodule BypassTest do
 
     assert {:ok, 200, ""} = request(bypass.port)
 
-    assert_raise RuntimeError, "Not available in ExUnit, as it's det automatically.", fn ->
+    assert_raise RuntimeError, "Not available in ExUnit, as it's configured automatically.", fn ->
       Bypass.verify_expectations!(bypass)
     end
   end

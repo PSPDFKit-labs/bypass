@@ -1,6 +1,6 @@
 defmodule Bypass do
   @moduledoc """
-  Bypass provides a quick way to create a custom plug that can be put
+  Bypass provides a quick way to create a custom Plug that can be put
   in place instead of an actual HTTP server to return prebaked responses
   to client requests.
 
@@ -57,7 +57,7 @@ defmodule Bypass do
   end
 
   defp verify_expectations!(:ex_unit, _bypass) do
-    raise "Not available in ExUnit, as it's det automatically."
+    raise "Not available in ExUnit, as it's configured automatically."
   end  
 
   if Code.ensure_loaded?(ESpec) do
