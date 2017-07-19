@@ -164,7 +164,7 @@ bypass = Bypass.open(port: 1234)
 
 ## How to use with ESpec
 
-While Bypass primarily targets ExUnit, the official Elixir builtin test framework, it can also be used with [ESpec](https://hex.pm/packages/espec). The test configuration is basically the same and the are only two differences:
+While Bypass primarily targets ExUnit, the official Elixir builtin test framework, it can also be used with [ESpec](https://hex.pm/packages/espec). The test configuration is basically the same, there are only two differences:
 
 1. In your Mix config file, you must declare which test framework Bypass is being used with (defaults to `:ex_unit`). This simply disables the automatic integration with some hooks provided by `ExUnit`.
 
