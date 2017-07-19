@@ -162,6 +162,43 @@ In case you need to assign a specific port to a Bypass instance to listen on, yo
 bypass = Bypass.open(port: 1234)
 ```
 
+## How to use with ESpec
+
+While Bypass primarily targets ExUnit, the official Elixir builtin test framework, it can also be used with [ESpec](https://hex.pm/packages/espec). The test configuration is basically the same and the are only two differences:
+
+1. In your Mix config file, you must declare which test framework Bypass is being used with (defaults to `:ex_unit`). This simply disables the automatic integration with some hooks provided by `ExUnit`.
+
+```elixir
+config :bypass, test_framework: :espec
+```
+
+2. In your specs, you must explicitly verify the declared expectations. You can do it in the `finally` block.
+
+```elixir
+defmodule TwitterClientSpec do
+  use ESpec, async: true
+
+  before do
+    bypass = Bypass.open
+    {:shared, bypass: bypass}
+  end
+
+  finally do
+    Bypass.verify_expectations!(shared.bypass)
+  end
+
+  specify "the client can handle an error response" do
+    Bypass.expect_once shared.bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+      Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+    end
+    {:ok, client} = TwitterClient.start_link(url: endpoint_url(shared.bypass.port))
+    assert {:error, :rate_limited} == TwitterClient.post_tweet(client, "Elixir is awesome!")
+  end
+
+  defp endpoint_url(port), do: "http://localhost:#{port}/"
+end
+```
+
 ## Configuration options
 
 Set `:enable_debug_log` to `true` in the application environment to make Bypass log what it's doing:
