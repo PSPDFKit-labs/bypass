@@ -109,7 +109,7 @@ defmodule Bypass.Instance do
   defp do_handle_call(
     {expect, method, path, fun}, _from, %{expectations: expectations} = state)
       when expect in [:expect, :expect_once]
-      and method in ["GET", "POST", "HEAD", "PUT", "DELETE", "OPTIONS", "CONNECT", :any]
+      and method in ["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT", :any]
       and (is_binary(path) or path == :any)
       and is_function(fun, 1)
   do

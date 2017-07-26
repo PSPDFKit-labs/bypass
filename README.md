@@ -74,7 +74,7 @@ Must be called exactly once.
 
 Must be called at least once.
 
-`method` is one of `["GET", "POST", "HEAD", "PUT", "DELETE", "OPTIONS", "CONNECT"]`
+`method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
 
 `path` is the endpoint.
 
@@ -89,7 +89,7 @@ Must be called at least once.
 
 Must be called exactly once.
 
-`method` is one of `["GET", "POST", "HEAD", "PUT", "DELETE", "OPTIONS", "CONNECT"]`
+`method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
 
 `path` is the endpoint.
 
