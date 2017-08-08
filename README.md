@@ -162,6 +162,9 @@ In case you need to assign a specific port to a Bypass instance to listen on, yo
 bypass = Bypass.open(port: 1234)
 ```
 
+> Note: `Bypass.open/0` **must not** be called in a `setup_all` blocks due to the way Bypass verifies the expectations at the end of each
+> test.
+
 ## How to use with ESpec
 
 While Bypass primarily targets ExUnit, the official Elixir builtin test framework, it can also be used with [ESpec](https://hex.pm/packages/espec). The test configuration is basically the same, there are only two differences:
