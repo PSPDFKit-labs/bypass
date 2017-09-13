@@ -14,7 +14,7 @@ defmodule Bypass do
 
   @doc """
   Starts an Elixir process running a minimal Plug app. The process
-  is a HTTP handler and listens to requests on a TPC port on localhost.
+  is a HTTP handler and listens to requests on a TCP port on localhost.
 
   Use the other functions in this module to declare which requests are
   handled and set expectations on the calls.
