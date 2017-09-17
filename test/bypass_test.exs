@@ -14,6 +14,16 @@ defmodule BypassTest do
     end
   end
 
+  test "show ISSUE #51" do
+    Enum.each(1..1000,
+      fn (_) ->
+        bypass = %Bypass{} = Bypass.open(port: 8000)
+
+        Bypass.down(bypass)
+      end
+    )
+  end
+
   test "Bypass.open can specify a port to operate on with expect" do
     1234 |> specify_port(:expect)
   end
