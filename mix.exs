@@ -33,6 +33,9 @@ defmodule Bypass.Mixfile do
   # depend on them from hex. In order to resolv this we need to override those dependencies. But
   # since you can't publish to hex with overriden dependencies this ugly hack only pulls the
   # dependencies in when in the test env.
+  #
+  # To grab all dependencies for testing, grab your depencies using:
+  # $ MIX_ENV=test mix deps.get
   defp deps(:test) do
     deps() ++ [
       {:cowlib, "~> 1.0.1", override: true},
