@@ -18,6 +18,19 @@ defmodule Bypass do
 
   Use the other functions in this module to declare which requests are
   handled and set expectations on the calls.
+
+  You can provide the following `opts`:
+
+    * `:port`      - Optional TCP port to listen on, defaults to a random assigned number
+
+  ## Examples
+
+      # Open a connection to the Bypass server on a random port
+      Bypass.open
+
+      # Open a connection on port 5678
+      iex> Bypass.open(port: 5678)
+
   """
   def open(opts \\ []) do
     case Supervisor.start_child(Bypass.Supervisor, [opts]) do
@@ -58,12 +71,12 @@ defmodule Bypass do
 
   defp verify_expectations!(:ex_unit, _bypass) do
     raise "Not available in ExUnit, as it's configured automatically."
-  end  
+  end
 
   if Code.ensure_loaded?(ESpec) do
     defp verify_expectations!(:espec, bypass) do
       do_verify_expectations(bypass.pid, ESpec.AssertionError)
-    end    
+    end
   end
 
 
