@@ -5,6 +5,7 @@ defmodule Bypass.Mixfile do
     [app: :bypass,
      version: "0.8.1",
      elixir: "~> 1.0",
+     docs: docs(),
      description: description(),
      package: package(),
      deps: deps(Mix.env)]
@@ -45,6 +46,13 @@ defmodule Bypass.Mixfile do
     ]
   end
   defp deps(_), do: deps()
+
+  defp docs do
+    [
+      main: "Bypass",
+      extras: ["README.md", "CHANGELOG.md"],
+  ]
+  end
 
   defp description do
     """
