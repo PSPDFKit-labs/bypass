@@ -108,7 +108,7 @@ defmodule Bypass.Instance do
 
   defp do_handle_call(
     {expect, method, path, fun}, _from, %{expectations: expectations} = state)
-      when expect in [:expect, :expect_once]
+      when expect in [:stub, :expect, :expect_once]
       and method in ["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT", :any]
       and (is_binary(path) or path == :any)
       and is_function(fun, 1)
@@ -123,6 +123,7 @@ defmodule Bypass.Instance do
             case expect do
               :expect -> :once_or_more
               :expect_once -> :once
+              :stub -> :none_or_more
             end
           ))
         _ ->
@@ -231,6 +232,7 @@ defmodule Bypass.Instance do
   defp expectation_problem_message(expectations) do
     problem_route =
       expectations
+      |> Enum.reject(fn {_route, expectations} -> expectations[:expected] == :none_or_more end)
       |> Enum.find(fn {_route, expectations} -> length(expectations.results) == 0 end)
 
     case problem_route do
