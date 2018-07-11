@@ -18,7 +18,7 @@ defmodule Bypass.Mixfile do
 
   defp deps do
     [
-      {:cowboy, "~> 1.0",},
+      {:cowboy, "~> 1.0 or ~> 2.0",},
       {:plug, "~> 1.0"},
       {:ex_doc, "> 0.0.0", only: :dev},
       {:espec, "~> 1.4", only: [:dev, :test]},
