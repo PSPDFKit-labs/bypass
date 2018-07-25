@@ -280,12 +280,33 @@ defmodule BypassTest do
     end)
   end
 
+  test "Bypass.stub/4 does not raise if request is made" do
+    :stub |> specific_route
+  end
+
+  test "Bypass.stub/4 does not raise if request is not made" do
+    :stub |> set_expectation("/stub_path")
+  end
+
   test "Bypass.expect/4 can be used to define a specific route" do
     :expect |> specific_route
   end
 
   test "Bypass.expect_once/4 can be used to define a specific route" do
     :expect_once |> specific_route
+  end
+
+  defp set_expectation(action, path) do
+    bypass = Bypass.open
+    method = "POST"
+
+    apply(Bypass, action, [
+      bypass, method, path, fn conn ->
+        assert conn.method == method
+        assert conn.request_path == path
+        Plug.Conn.send_resp(conn, 200, "")
+      end
+    ])
   end
 
   defp specific_route(expect_fun) do

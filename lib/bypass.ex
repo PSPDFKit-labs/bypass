@@ -58,12 +58,12 @@ defmodule Bypass do
 
   defp verify_expectations!(:ex_unit, _bypass) do
     raise "Not available in ExUnit, as it's configured automatically."
-  end  
+  end
 
   if Code.ensure_loaded?(ESpec) do
     defp verify_expectations!(:espec, bypass) do
       do_verify_expectations(bypass.pid, ESpec.AssertionError)
-    end    
+    end
   end
 
 
@@ -110,6 +110,9 @@ defmodule Bypass do
 
   def expect_once(%Bypass{pid: pid}, methods, paths, fun),
     do: Bypass.Instance.call(pid, {:expect_once, methods, paths, fun})
+
+  def stub(%Bypass{pid: pid}, methods, paths, fun),
+    do: Bypass.Instance.call(pid, {:stub, methods, paths, fun})
 
   def pass(%Bypass{pid: pid}),
     do: Bypass.Instance.call(pid, :pass)

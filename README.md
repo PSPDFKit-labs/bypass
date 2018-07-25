@@ -43,6 +43,7 @@ the socket updates its state.
 You can take any of the following approaches:
 * `expect/2` or `expect_once/2` to install a generic function that all calls to bypass will use
 * `expect/4` and/or `expect_once/4` to install specific routes (method and path)
+* `stub/4` to install specific routes without expectations
 * a combination of the above, where the routes will be used first, and then the generic version
   will be used as default
 
@@ -95,6 +96,21 @@ Must be called exactly once.
 
 ```elixir
   Bypass.expect_once bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+    Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no+1} end)
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+  end
+```
+
+#### stub/4 (bypass_instance, method, path, function)
+
+May be called none or more times.
+
+`method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
+
+`path` is the endpoint.
+
+```elixir
+  Bypass.stub bypass, "POST", "/1.1/statuses/update.json", fn conn ->
     Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no+1} end)
     Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
   end
