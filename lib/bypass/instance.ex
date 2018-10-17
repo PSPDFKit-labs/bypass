@@ -3,6 +3,8 @@ defmodule Bypass.Instance do
 
   import Bypass.Utils
 
+  alias Plug.Adapters.{Cowboy, Cowboy2}
+
   # This is used to override the default behaviour of ranch_tcp
   # and limit the range of interfaces it will listen on to just
   # the loopback interface.
@@ -26,7 +28,7 @@ defmodule Bypass.Instance do
   # GenServer callbacks
 
   def init([opts]) do
-    adapter = adapter_from_options(opts)
+    adapter = adapter_from_cowboy_vsn()
     # Get a free port from the OS
     case :ranch_tcp.listen(ip: @listen_ip, port: Keyword.get(opts, :port, 0)) do
       {:ok, socket} ->
@@ -325,11 +327,10 @@ defmodule Bypass.Instance do
     }
   end
 
-  defp adapter_from_options(opts) do
-    case Keyword.get(opts, :adapter) do
-      nil ->
-        Application.get_env(:bypass, :adapter)
-      adapter -> adapter
+  def adapter_from_cowboy_vsn() do
+    case Application.spec(:cowboy, :vsn) do
+      [?1 | _] -> Cowboy
+      _ -> Cowboy2
     end
   end
 end
