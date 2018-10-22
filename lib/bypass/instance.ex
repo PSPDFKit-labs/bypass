@@ -26,7 +26,6 @@ defmodule Bypass.Instance do
   # GenServer callbacks
 
   def init([opts]) do
-    adapter = adapter_from_options(opts)
     # Get a free port from the OS
     case :ranch_tcp.listen(ip: @listen_ip, port: Keyword.get(opts, :port, 0)) do
       {:ok, socket} ->
@@ -34,10 +33,9 @@ defmodule Bypass.Instance do
         :erlang.port_close(socket)
 
         ref = make_ref()
-        socket = do_up(port, ref, adapter)
+        socket = do_up(port, ref)
 
         state = %{
-          adapter: adapter,
           expectations: %{},
           port: port,
           ref: ref,
@@ -83,8 +81,8 @@ defmodule Bypass.Instance do
     {:reply, port, state}
   end
 
-  defp do_handle_call(:up, _from, %{port: port, ref: ref, socket: nil, adapter: adapter} = state) do
-    socket = do_up(port, ref, adapter)
+  defp do_handle_call(:up, _from, %{port: port, ref: ref, socket: nil} = state) do
+    socket = do_up(port, ref)
     {:reply, :ok, %{state | socket: socket}}
   end
   defp do_handle_call(:up, _from, state) do
@@ -94,12 +92,12 @@ defmodule Bypass.Instance do
   defp do_handle_call(:down, _from, %{socket: nil} = state) do
     {:reply, {:error, :already_down}, state}
   end
-  defp do_handle_call(:down, from, %{socket: socket, ref: ref, callers_awaiting_down: callers_awaiting_down, adapter: adapter} = state) when not is_nil(socket) do
+  defp do_handle_call(:down, from, %{socket: socket, ref: ref, callers_awaiting_down: callers_awaiting_down} = state) when not is_nil(socket) do
     if retained_plugs_count(state) > 0 do
       # wait for plugs to finish
       {:noreply, %{state | callers_awaiting_down: [from | callers_awaiting_down]}}
     else
-      do_down(ref, socket, adapter)
+      do_down(ref, socket)
       {:reply, :ok, %{state | socket: nil}}
     end
   end
@@ -187,12 +185,12 @@ defmodule Bypass.Instance do
     end
   end
 
-  defp do_exit(%{adapter: adapter} = state) do
+  defp do_exit(state) do
     updated_state =
       case state do
         %{socket: nil} -> state
         %{socket: socket, ref: ref} ->
-          do_down(ref, socket, adapter)
+          do_down(ref, socket)
           %{state | socket: nil}
       end
 
@@ -264,16 +262,16 @@ defmodule Bypass.Instance do
     {route, Map.get(expectations, route)}
   end
 
-  defp do_up(port, ref, adapter) do
+  defp do_up(port, ref) do
     plug_opts = [self()]
     {:ok, socket} = :ranch_tcp.listen(ip: @listen_ip, port: port)
-    cowboy_opts = [ref: ref, acceptors: 5, port: port, socket: socket]
-    {:ok, _pid} = adapter.http(Bypass.Plug, plug_opts, cowboy_opts)
+    cowboy_opts = [ref: ref, port: port, transport_options: [num_acceptors: 5, socket: socket]]
+    {:ok, _pid} = Plug.Cowboy.http(Bypass.Plug, plug_opts, cowboy_opts)
     socket
   end
 
-  defp do_down(ref, socket, adapter) do
-    :ok = adapter.shutdown(ref)
+  defp do_down(ref, socket) do
+    :ok = Plug.Cowboy.shutdown(ref)
 
     # `port_close` is synchronous, so after it has returned we _know_ that the socket has been
     # closed. If we'd rely on ranch's supervisor shutting down the acceptor processes and thereby
@@ -286,12 +284,12 @@ defmodule Bypass.Instance do
   end
 
   defp dispatch_awaiting_callers(%{callers_awaiting_down: down_callers,
-    callers_awaiting_exit: exit_callers, socket: socket, ref: ref, adapter: adapter} = state) do
+    callers_awaiting_exit: exit_callers, socket: socket, ref: ref} = state) do
 
     if retained_plugs_count(state) == 0 do
       down_reset =
         if length(down_callers) > 0 do
-          do_down(ref, socket, adapter)
+          do_down(ref, socket)
           Enum.each(down_callers, &(GenServer.reply(&1, :ok)))
           %{state | socket: nil, callers_awaiting_down: []}
         end
@@ -323,13 +321,5 @@ defmodule Bypass.Instance do
       results: [],
       request_count: 0
     }
-  end
-
-  defp adapter_from_options(opts) do
-    case Keyword.get(opts, :adapter) do
-      nil ->
-        Application.get_env(:bypass, :adapter)
-      adapter -> adapter
-    end
   end
 end

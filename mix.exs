@@ -18,15 +18,15 @@ defmodule Bypass.Mixfile do
 
   defp deps do
     [
-      {:cowboy, "~> 1.0 or ~> 2.0",},
-      {:plug, "~> 1.0"},
+      {:plug_cowboy, "~> 1.0 or ~> 2.0",},
+      {:plug, "~> 1.7"},
       {:ex_doc, "> 0.0.0", only: :dev},
       {:espec, "~> 1.4", only: [:dev, :test]},
     ]
   end
 
   defp env do
-    [enable_debug_log: false, adapter: Plug.Adapters.Cowboy]
+    [enable_debug_log: false]
   end
 
   # We need to work around the fact that gun would pull in cowlib/ranch from git, while cowboy/plug

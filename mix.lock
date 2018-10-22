@@ -1,9 +1,14 @@
-%{"cowboy": {:hex, :cowboy, "1.0.4", "a324a8df9f2316c833a470d918aaf73ae894278b8aa6226ce7a9bf699388f878", [:make, :rebar], [{:cowlib, "~> 1.0.0", [hex: :cowlib, repo: "hexpm", optional: false]}, {:ranch, "~> 1.0", [hex: :ranch, repo: "hexpm", optional: false]}], "hexpm"},
-  "cowlib": {:hex, :cowlib, "1.0.2", "9d769a1d062c9c3ac753096f868ca121e2730b9a377de23dec0f7e08b1df84ee", [:make], [], "hexpm"},
+%{
+  "cowboy": {:hex, :cowboy, "2.5.0", "4ef3ae066ee10fe01ea3272edc8f024347a0d3eb95f6fbb9aed556dacbfc1337", [:rebar3], [{:cowlib, "~> 2.6.0", [hex: :cowlib, repo: "hexpm", optional: false]}, {:ranch, "~> 1.6.2", [hex: :ranch, repo: "hexpm", optional: false]}], "hexpm"},
+  "cowlib": {:hex, :cowlib, "2.6.0", "8aa629f81a0fc189f261dc98a42243fa842625feea3c7ec56c48f4ccdb55490f", [:rebar3], [], "hexpm"},
   "earmark": {:hex, :earmark, "1.1.0", "8c2bf85d725050a92042bc1edf362621004d43ca6241c756f39612084e95487f", [:mix], [], "hexpm"},
   "espec": {:hex, :espec, "1.4.1", "d453c32835736bb01b68b32b571fb23ad307f019c33952602a17e3a9b6e6e9b0", [:mix], [{:meck, "0.8.4", [hex: :meck, repo: "hexpm", optional: false]}], "hexpm"},
   "ex_doc": {:hex, :ex_doc, "0.14.5", "c0433c8117e948404d93ca69411dd575ec6be39b47802e81ca8d91017a0cf83c", [:mix], [{:earmark, "~> 1.0", [hex: :earmark, repo: "hexpm", optional: false]}], "hexpm"},
   "gun": {:git, "https://github.com/PSPDFKit-labs/gun.git", "0462585ec7b0bcb2ca4b8b91e6d2624a45324b6e", []},
   "meck": {:hex, :meck, "0.8.4", "59ca1cd971372aa223138efcf9b29475bde299e1953046a0c727184790ab1520", [:make, :rebar], [], "hexpm"},
-  "plug": {:hex, :plug, "1.1.6", "8927e4028433fcb859e000b9389ee9c37c80eb28378eeeea31b0273350bf668b", [:mix], [{:cowboy, "~> 1.0", [hex: :cowboy, repo: "hexpm", optional: true]}], "hexpm"},
-  "ranch": {:hex, :ranch, "1.2.1", "a6fb992c10f2187b46ffd17ce398ddf8a54f691b81768f9ef5f461ea7e28c762", [:make], [], "hexpm"}}
+  "mime": {:hex, :mime, "1.3.0", "5e8d45a39e95c650900d03f897fbf99ae04f60ab1daa4a34c7a20a5151b7a5fe", [:mix], [], "hexpm"},
+  "plug": {:hex, :plug, "1.7.0", "cd8c8de89bd9de55eba1c918bf0e7f319737e109b6014875104af025a623e16e", [:mix], [{:mime, "~> 1.0", [hex: :mime, repo: "hexpm", optional: false]}, {:plug_crypto, "~> 1.0", [hex: :plug_crypto, repo: "hexpm", optional: false]}], "hexpm"},
+  "plug_cowboy": {:hex, :plug_cowboy, "2.0.0", "ab0c92728f2ba43c544cce85f0f220d8d30fc0c90eaa1e6203683ab039655062", [:mix], [{:cowboy, "~> 2.5", [hex: :cowboy, repo: "hexpm", optional: false]}, {:plug, "~> 1.7", [hex: :plug, repo: "hexpm", optional: false]}], "hexpm"},
+  "plug_crypto": {:hex, :plug_crypto, "1.0.0", "18e49317d3fa343f24620ed22795ec29d4a5e602d52d1513ccea0b07d8ea7d4d", [:mix], [], "hexpm"},
+  "ranch": {:hex, :ranch, "1.6.2", "6db93c78f411ee033dbb18ba8234c5574883acb9a75af0fb90a9b82ea46afa00", [:rebar3], [], "hexpm"},
+}
