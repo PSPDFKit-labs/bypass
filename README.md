@@ -244,4 +244,8 @@ This software is licensed under [the MIT license](LICENSE).
 
 This project is maintained and funded by [PSPDFKit](https://pspdfkit.com/).
 
+Please ensure
+[you signed our CLA](https://pspdfkit.com/guides/web/current/miscellaneous/contributing/) so we can
+accept your contributions.
+
 See [our other open source projects](https://github.com/PSPDFKit-labs), read [our blog](https://pspdfkit.com/blog/) or say hello on Twitter ([@PSPDFKit](https://twitter.com/pspdfkit)).
