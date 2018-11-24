@@ -11,14 +11,14 @@ defmodule Bypass.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :ranch, :cowboy, :plug],
+    [applications: [:logger, :ranch, :cowboy, :plug, :plug_cowboy],
      mod: {Bypass.Application, []},
      env: env()]
   end
 
   defp deps do
     [
-      {:plug_cowboy, "~> 1.0 or ~> 2.0",},
+      {:plug_cowboy, "~> 1.0 or ~> 2.0"},
       {:plug, "~> 1.7"},
       {:ex_doc, "> 0.0.0", only: :dev},
       {:espec, "~> 1.4", only: [:dev, :test]},

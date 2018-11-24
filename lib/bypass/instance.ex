@@ -265,7 +265,7 @@ defmodule Bypass.Instance do
   defp do_up(port, ref) do
     plug_opts = [self()]
     {:ok, socket} = :ranch_tcp.listen(ip: @listen_ip, port: port)
-    cowboy_opts = [ref: ref, port: port, transport_options: [num_acceptors: 5, socket: socket]]
+    cowboy_opts = cowboy_opts(port, ref, socket)
     {:ok, _pid} = Plug.Cowboy.http(Bypass.Plug, plug_opts, cowboy_opts)
     socket
   end
@@ -321,5 +321,12 @@ defmodule Bypass.Instance do
       results: [],
       request_count: 0
     }
+  end
+
+  defp cowboy_opts(port, ref, socket) do
+    case Application.spec(:plug_cowboy, :vsn) do
+      '1.' ++ _ -> [ref: ref, acceptors: 5, port: port, socket: socket]
+      _ -> [ref: ref, port: port, transport_options: [num_acceptors: 5, socket: socket]]
+    end
   end
 end
