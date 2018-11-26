@@ -13,14 +13,14 @@ Add bypass to your list of dependencies in mix.exs:
 
 ```elixir
 def deps do
-  [{:bypass, "~> 0.8", only: :test}]
+  [{:bypass, "~> 1.0", only: :test}]
 end
 ```
 
 We do not recommended adding `:bypass` to the list of applications in your `mix.exs`. See below
 for usage info.
 
-Bypass supports Elixir 1.0 and up.
+Bypass supports Elixir 1.6 and OTP 20 and up. It works with Cowboy 1 and 2.
 
 
 ## Usage
