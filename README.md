@@ -226,12 +226,6 @@ Set `:enable_debug_log` to `true` in the application environment to make Bypass 
 config :bypass, enable_debug_log: true
 ```
 
-Set `:adapter` to `Plug.Adapters.Cowboy2` for Cowboy2 support
-
-```elixir
-config :bypass, adapter: Plug.Adapters.Cowboy2
-```
-
 ## License
 
 This software is licensed under [the MIT license](LICENSE).
