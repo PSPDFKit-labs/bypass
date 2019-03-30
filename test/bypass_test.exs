@@ -45,7 +45,8 @@ defmodule BypassTest do
     ])
   
     assert {:ok, 200, ""} = request(port)
-    assert {:error, :eaddrinuse} == Bypass.open(port: port)
+    bypass2 = Bypass.open(port: port)
+    assert(is_map(bypass2) and bypass2.__struct__ == Bypass)
   end
 
   test "Bypass.down takes down the socket with expect" do
