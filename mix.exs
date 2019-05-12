@@ -1,13 +1,17 @@
 defmodule Bypass.Mixfile do
   use Mix.Project
 
+  @version "1.0.0"
+  @source_url "https://github.com/PSPDFKit-labs/bypass"
+
   def project do
     [app: :bypass,
-     version: "1.0.0",
+     version: @version,
      elixir: "~> 1.0",
      description: description(),
      package: package(),
-     deps: deps(Mix.env)]
+     deps: deps(Mix.env),
+     docs: docs()]
   end
 
   def application do
@@ -43,6 +47,14 @@ defmodule Bypass.Mixfile do
   end
   defp deps(_), do: deps()
 
+  defp docs do
+    [
+      main: "Bypass",
+      source_url: @source_url,
+      source_ref: "v#{@version}"
+    ]
+  end
+
   defp description do
     """
     Bypass provides a quick way to create a custom plug that can be put in place instead of an
@@ -58,7 +70,7 @@ defmodule Bypass.Mixfile do
       maintainers: ["PSPDFKit"],
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/pspdfkit-labs/bypass",
+        "GitHub" => @source_url,
         "PSPDFKit" => "https://pspdfkit.com",
       }
     ]
