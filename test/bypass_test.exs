@@ -24,7 +24,7 @@ defmodule BypassTest do
 
   defp specify_port(port, expect_fun) do
     bypass = Bypass.open(port: port)
-  
+
     # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
       bypass,
@@ -33,7 +33,7 @@ defmodule BypassTest do
         Plug.Conn.send_resp(conn, 200, "")
       end
     ])
-  
+
     assert {:ok, 200, ""} = request(port)
     assert {:error, :eaddrinuse} == Bypass.open(port: port)
   end
@@ -403,10 +403,56 @@ defmodule BypassTest do
     end
   end
 
+  test "Bypass.expect/4 can be used to define a specific route and then redefined" do
+  :expect |> specific_route_redefined
+  end
+
+  test "Bypass.expect_once/4 can be used to define a specific route and then redefined" do
+  :expect_once |> specific_route_redefined
+  end
+
+  defp specific_route_redefined(expect_fun) do
+    bypass = Bypass.open()
+    method = "POST"
+    path = "/this"
+
+    # one of Bypass.expect or Bypass.expect_once
+    apply(Bypass, expect_fun, [
+      bypass,
+      method,
+      path,
+      fn conn ->
+        assert conn.method == method
+        assert conn.request_path == path
+        Plug.Conn.send_resp(conn, 200, "")
+      end
+    ])
+
+    capture_log(fn ->
+      assert {:ok, 200, ""} = request(bypass.port, path)
+    end)
+
+    # redefining the expect
+    apply(Bypass, expect_fun, [
+      bypass,
+      method,
+      path,
+      fn conn ->
+        assert conn.method == method
+        assert conn.request_path == path
+        Plug.Conn.send_resp(conn, 200, "other response")
+      end
+    ])
+
+    capture_log(fn ->
+      assert {:ok, 200, "other response"} = request(bypass.port, path)
+    end)
+  end
+
 
   defp prepare_stubs do
     bypass = Bypass.open
-  
+
     Bypass.expect_once(bypass, fn conn ->
       Plug.Conn.send_resp(conn, 200, "")
     end)
