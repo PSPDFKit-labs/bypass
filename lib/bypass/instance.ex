@@ -326,7 +326,16 @@ defmodule Bypass.Instance do
   defp cowboy_opts(port, ref, socket) do
     case Application.spec(:plug_cowboy, :vsn) do
       '1.' ++ _ -> [ref: ref, acceptors: 5, port: port, socket: socket]
-      _ -> [ref: ref, port: port, transport_options: [num_acceptors: 5, socket: socket]]
+      _ ->
+        transport_options = if Enum.take(Application.spec(:ranch, :vsn), 4) in ['1.0.', '1.1.', '1.2.', '1.3.', '1.4.', '1.5.'] do
+          [num_acceptors: 5, socket: socket]
+        else
+          %{
+            num_acceptors: 5,
+            socket_opts: socket
+          }
+        end
+        [ref: ref, port: port, transport_options: transport_options]
     end
   end
 end
