@@ -20,7 +20,7 @@ defmodule Bypass do
   handled and set expectations on the calls.
   """
   def open(opts \\ []) do
-    case Supervisor.start_child(Bypass.Supervisor, [opts]) do
+    case DynamicSupervisor.start_child(Bypass.Supervisor, Bypass.Instance.child_spec(opts)) do
       {:ok, pid} ->
         port = Bypass.Instance.call(pid, :port)
         debug_log "Did open connection #{inspect pid} on port #{inspect port}"

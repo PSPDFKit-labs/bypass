@@ -1,5 +1,5 @@
 defmodule Bypass.Instance do
-  use GenServer
+  use GenServer, restart: :transient
 
   import Bypass.Utils
 
