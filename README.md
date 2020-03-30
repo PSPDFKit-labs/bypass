@@ -13,7 +13,9 @@ Add bypass to your list of dependencies in mix.exs:
 
 ```elixir
 def deps do
-  [{:bypass, "~> 1.0", only: :test}]
+  [
+    {:bypass, "~> 1.0", only: :test}
+  ]
 end
 ```
 
@@ -28,7 +30,7 @@ Bypass supports Elixir 1.6 and OTP 20 and up. It works with Cowboy 1 and 2.
 Start Bypass in your `test/test_helper.exs` file to make it available in tests:
 
 ```elixir
-ExUnit.start
+ExUnit.start()
 Application.ensure_all_started(:bypass)
 ```
 
@@ -52,11 +54,11 @@ You can take any of the following approaches:
 Must be called at least once.
 
 ```elixir
-  Bypass.expect bypass, fn conn ->
-    assert "/1.1/statuses/update.json" == conn.request_path
-    assert "POST" == conn.method
-    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
-  end
+Bypass.expect(bypass, fn conn ->
+  assert "/1.1/statuses/update.json" == conn.request_path
+  assert "POST" == conn.method
+  Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+end)
 ```
 
 #### expect_once/2 (bypass_instance, function)
@@ -64,11 +66,11 @@ Must be called at least once.
 Must be called exactly once.
 
 ```elixir
-  Bypass.expect_once bypass, fn conn ->
-    assert "/1.1/statuses/update.json" == conn.request_path
-    assert "POST" == conn.method
-    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
-  end
+Bypass.expect_once(bypass, fn conn ->
+  assert "/1.1/statuses/update.json" == conn.request_path
+  assert "POST" == conn.method
+  Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+end)
 ```
 
 #### expect/4 (bypass_instance, method, path, function)
@@ -80,10 +82,10 @@ Must be called at least once.
 `path` is the endpoint.
 
 ```elixir
-  Bypass.expect bypass, "POST", "/1.1/statuses/update.json", fn conn ->
-    Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no+1} end)
-    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
-  end
+Bypass.expect(bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+  Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
+  Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+end)
 ```
 
 #### expect_once/4 (bypass_instance, method, path, function)
@@ -95,10 +97,10 @@ Must be called exactly once.
 `path` is the endpoint.
 
 ```elixir
-  Bypass.expect_once bypass, "POST", "/1.1/statuses/update.json", fn conn ->
-    Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no+1} end)
-    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
-  end
+Bypass.expect_once(bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+  Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
+  Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+end)
 ```
 
 #### stub/4 (bypass_instance, method, path, function)
@@ -110,10 +112,10 @@ May be called none or more times.
 `path` is the endpoint.
 
 ```elixir
-  Bypass.stub bypass, "POST", "/1.1/statuses/update.json", fn conn ->
-    Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no+1} end)
-    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
-  end
+Bypass.stub(bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+  Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
+  Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+end)
 ```
 
 ### Example
@@ -126,23 +128,25 @@ defmodule TwitterClientTest do
   use ExUnit.Case, async: true
 
   setup do
-    bypass = Bypass.open
+    bypass = Bypass.open()
     {:ok, bypass: bypass}
   end
 
   test "client can handle an error response", %{bypass: bypass} do
-    Bypass.expect_once bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+    Bypass.expect_once(bypass, "POST", "/1.1/statuses/update.json", fn conn ->
       Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
-    end
+    end)
+
     {:ok, client} = TwitterClient.start_link(url: endpoint_url(bypass.port))
     assert {:error, :rate_limited} == TwitterClient.post_tweet(client, "Elixir is awesome!")
   end
 
   test "client can recover from server downtime", %{bypass: bypass} do
-    Bypass.expect bypass, fn conn ->
+    Bypass.expect(bypass, fn conn ->
       # We don't care about `request_path` or `method` for this test.
       Plug.Conn.resp(conn, 200, "")
-    end
+    end)
+
     {:ok, client} = TwitterClient.start_link(url: endpoint_url(bypass.port))
 
     assert :ok == TwitterClient.post_tweet(client, "Elixir is awesome!")
@@ -198,7 +202,7 @@ defmodule TwitterClientSpec do
   use ESpec, async: true
 
   before do
-    bypass = Bypass.open
+    bypass = Bypass.open()
     {:shared, bypass: bypass}
   end
 
@@ -207,9 +211,10 @@ defmodule TwitterClientSpec do
   end
 
   specify "the client can handle an error response" do
-    Bypass.expect_once shared.bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+    Bypass.expect_once(shared.bypass, "POST", "/1.1/statuses/update.json", fn conn ->
       Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
-    end
+    end)
+
     {:ok, client} = TwitterClient.start_link(url: endpoint_url(shared.bypass.port))
     assert {:error, :rate_limited} == TwitterClient.post_tweet(client, "Elixir is awesome!")
   end
