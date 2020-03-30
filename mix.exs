@@ -38,7 +38,7 @@ defmodule Bypass.Mixfile do
   end
 
   # We need to work around the fact that gun would pull in cowlib/ranch from git, while cowboy/plug
-  # depend on them from hex. In order to resolv this we need to override those dependencies. But
+  # depend on them from hex. In order to resolve this we need to override those dependencies. But
   # since you can't publish to hex with overriden dependencies this ugly hack only pulls the
   # dependencies in when in the test env.
   defp deps(:test) do
