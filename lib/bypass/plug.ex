@@ -4,9 +4,11 @@ defmodule Bypass.Plug do
   def call(%{method: method, request_path: request_path} = conn, pid) do
     route = Bypass.Instance.call(pid, {:get_route, method, request_path})
     ref = make_ref()
+
     case Bypass.Instance.call(pid, {:get_expect_fun, route}) do
       fun when is_function(fun, 1) ->
         retain_current_plug(pid, route, ref)
+
         try do
           fun.(conn)
         else
@@ -15,10 +17,11 @@ defmodule Bypass.Plug do
             conn
         catch
           class, reason ->
-            stacktrace = System.stacktrace
+            stacktrace = System.stacktrace()
             put_result(pid, route, ref, {:exit, {class, reason, stacktrace}})
             :erlang.raise(class, reason, stacktrace)
         end
+
       {:error, error, route} ->
         put_result(pid, route, ref, {:error, error, route})
         raise "Route error"
