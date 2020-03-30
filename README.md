@@ -13,14 +13,14 @@ Add bypass to your list of dependencies in mix.exs:
 
 ```elixir
 def deps do
-  [{:bypass, "~> 0.8", only: :test}]
+  [{:bypass, "~> 1.0", only: :test}]
 end
 ```
 
 We do not recommended adding `:bypass` to the list of applications in your `mix.exs`. See below
 for usage info.
 
-Bypass supports Elixir 1.0 and up.
+Bypass supports Elixir 1.6 and OTP 20 and up. It works with Cowboy 1 and 2.
 
 
 ## Usage
@@ -43,6 +43,7 @@ the socket updates its state.
 You can take any of the following approaches:
 * `expect/2` or `expect_once/2` to install a generic function that all calls to bypass will use
 * `expect/4` and/or `expect_once/4` to install specific routes (method and path)
+* `stub/4` to install specific routes without expectations
 * a combination of the above, where the routes will be used first, and then the generic version
   will be used as default
 
@@ -95,6 +96,21 @@ Must be called exactly once.
 
 ```elixir
   Bypass.expect_once bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+    Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no+1} end)
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+  end
+```
+
+#### stub/4 (bypass_instance, method, path, function)
+
+May be called none or more times.
+
+`method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
+
+`path` is the endpoint.
+
+```elixir
+  Bypass.stub bypass, "POST", "/1.1/statuses/update.json", fn conn ->
     Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no+1} end)
     Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
   end
@@ -221,5 +237,9 @@ This software is licensed under [the MIT license](LICENSE).
 </a>
 
 This project is maintained and funded by [PSPDFKit](https://pspdfkit.com/).
+
+Please ensure
+[you signed our CLA](https://pspdfkit.com/guides/web/current/miscellaneous/contributing/) so we can
+accept your contributions.
 
 See [our other open source projects](https://github.com/PSPDFKit-labs), read [our blog](https://pspdfkit.com/blog/) or say hello on Twitter ([@PSPDFKit](https://twitter.com/pspdfkit)).

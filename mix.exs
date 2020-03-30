@@ -1,28 +1,35 @@
 defmodule Bypass.Mixfile do
   use Mix.Project
 
+  @version "1.0.0"
+  @source_url "https://github.com/PSPDFKit-labs/bypass"
+
   def project do
-    [app: :bypass,
-     version: "0.8.1",
-     elixir: "~> 1.0",
-     docs: docs(),
-     description: description(),
-     package: package(),
-     deps: deps(Mix.env)]
+    [
+      app: :bypass,
+      version: @version,
+      elixir: "~> 1.0",
+      description: description(),
+      package: package(),
+      deps: deps(Mix.env()),
+      docs: docs()
+    ]
   end
 
   def application do
-    [applications: [:logger, :ranch, :cowboy, :plug],
-     mod: {Bypass.Application, []},
-     env: env()]
+    [
+      applications: [:logger, :ranch, :cowboy, :plug, :plug_cowboy],
+      mod: {Bypass.Application, []},
+      env: env()
+    ]
   end
 
   defp deps do
     [
-      {:cowboy, "~> 1.0",},
-      {:plug, "~> 1.0"},
+      {:plug_cowboy, "~> 1.0 or ~> 2.0"},
+      {:plug, "~> 1.7"},
       {:ex_doc, "> 0.0.0", only: :dev},
-      {:espec, "~> 1.4", only: [:dev, :test]},
+      {:espec, "~> 1.6", only: [:dev, :test]}
     ]
   end
 
@@ -38,20 +45,29 @@ defmodule Bypass.Mixfile do
   # To grab all dependencies for testing, grab your depencies using:
   # $ MIX_ENV=test mix deps.get
   defp deps(:test) do
-    deps() ++ [
-      {:cowlib, "~> 1.0.1", override: true},
-      {:ranch, "~> 1.2.0", override: true},
-
-      {:gun, github: "PSPDFKit-labs/gun", only: :test}
-    ]
+    deps() ++
+      [
+        {:cowlib, "~> 1.0.1", override: true},
+        {:ranch, "~> 1.2.0", override: true},
+        {:gun, github: "PSPDFKit-labs/gun", only: :test}
+      ]
   end
+
   defp deps(_), do: deps()
 
   defp docs do
     [
       main: "Bypass",
-      extras: ["README.md", "CHANGELOG.md"],
-  ]
+      source_url: @source_url,
+      source_ref: "v#{@version}"
+    ]
+  end
+
+  defp docs do
+    [
+      main: "Bypass",
+      extras: ["README.md", "CHANGELOG.md"]
+    ]
   end
 
   defp description do
@@ -69,8 +85,8 @@ defmodule Bypass.Mixfile do
       maintainers: ["PSPDFKit"],
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/pspdfkit-labs/bypass",
-        "PSPDFKit" => "https://pspdfkit.com",
+        "GitHub" => @source_url,
+        "PSPDFKit" => "https://pspdfkit.com"
       }
     ]
   end
