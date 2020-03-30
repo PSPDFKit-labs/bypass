@@ -23,15 +23,15 @@ defmodule Bypass do
     case Supervisor.start_child(Bypass.Supervisor, [opts]) do
       {:ok, pid} ->
         port = Bypass.Instance.call(pid, :port)
-        debug_log "Did open connection #{inspect pid} on port #{inspect port}"
+        debug_log("Did open connection #{inspect(pid)} on port #{inspect(port)}")
         bypass = %Bypass{pid: pid, port: port}
         setup_framework_integration(test_framework(), bypass)
         bypass
+
       other ->
         other
     end
   end
-
 
   # Raise an error if called with an unknown framework
   #
@@ -44,7 +44,6 @@ defmodule Bypass do
   defp setup_framework_integration(:espec, _bypass) do
     # Entry point for more advanced ESpec configurations
   end
-
 
   @doc """
   Can be called to immediately verify if the declared request
@@ -66,32 +65,38 @@ defmodule Bypass do
     end
   end
 
-
   defp do_verify_expectations(bypass_pid, error_module) do
     case Bypass.Instance.call(bypass_pid, :on_exit) do
       :ok ->
         :ok
+
       :ok_call ->
         :ok
+
       {:error, :too_many_requests, {:any, :any}} ->
         raise error_module, "Expected only one HTTP request for Bypass"
+
       {:error, :too_many_requests, {method, path}} ->
         raise error_module, "Expected only one HTTP request for Bypass at #{method} #{path}"
+
       {:error, :unexpected_request, {:any, :any}} ->
         raise error_module, "Bypass got an HTTP request but wasn't expecting one"
+
       {:error, :unexpected_request, {method, path}} ->
         raise error_module,
-          "Bypass got an HTTP request but wasn't expecting one at #{method} #{path}"
+              "Bypass got an HTTP request but wasn't expecting one at #{method} #{path}"
+
       {:error, :not_called, {:any, :any}} ->
         raise error_module, "No HTTP request arrived at Bypass"
+
       {:error, :not_called, {method, path}} ->
         raise error_module,
-          "No HTTP request arrived at Bypass at #{method} #{path}"
+              "No HTTP request arrived at Bypass at #{method} #{path}"
+
       {:exit, {class, reason, stacktrace}} ->
         :erlang.raise(class, reason, stacktrace)
     end
   end
-
 
   def up(%Bypass{pid: pid}),
     do: Bypass.Instance.call(pid, :up)
@@ -116,7 +121,6 @@ defmodule Bypass do
 
   def pass(%Bypass{pid: pid}),
     do: Bypass.Instance.call(pid, :pass)
-
 
   defp test_framework do
     Application.get_env(:bypass, :test_framework, :ex_unit)
