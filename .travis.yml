@@ -18,7 +18,10 @@ install:
   - mix compile
 script:
   - mix test
-# matrix:
-#   exclude:
-#     - otp_release: 20.0
-#       elixir: 1.3.4
+# https://hexdocs.pm/elixir/compatibility-and-deprecations.html#compatibility-between-elixir-and-erlang-otp
+matrix:
+  exclude:
+    - otp_release: 22.0
+      elixir: 1.6
+    - otp_release: 20.0
+      elixir: 1.10
