@@ -5,19 +5,23 @@ defmodule Bypass.Mixfile do
   @source_url "https://github.com/PSPDFKit-labs/bypass"
 
   def project do
-    [app: :bypass,
-     version: @version,
-     elixir: "~> 1.0",
-     description: description(),
-     package: package(),
-     deps: deps(Mix.env),
-     docs: docs()]
+    [
+      app: :bypass,
+      version: @version,
+      elixir: "~> 1.0",
+      description: description(),
+      package: package(),
+      deps: deps(Mix.env()),
+      docs: docs()
+    ]
   end
 
   def application do
-    [applications: [:logger, :ranch, :cowboy, :plug, :plug_cowboy],
-     mod: {Bypass.Application, []},
-     env: env()]
+    [
+      applications: [:logger, :ranch, :cowboy, :plug, :plug_cowboy],
+      mod: {Bypass.Application, []},
+      env: env()
+    ]
   end
 
   defp deps do
@@ -25,7 +29,7 @@ defmodule Bypass.Mixfile do
       {:plug_cowboy, "~> 1.0 or ~> 2.0"},
       {:plug, "~> 1.7"},
       {:ex_doc, "> 0.0.0", only: :dev},
-      {:espec, "~> 1.6", only: [:dev, :test]},
+      {:espec, "~> 1.6", only: [:dev, :test]}
     ]
   end
 
@@ -38,13 +42,14 @@ defmodule Bypass.Mixfile do
   # since you can't publish to hex with overriden dependencies this ugly hack only pulls the
   # dependencies in when in the test env.
   defp deps(:test) do
-    deps() ++ [
-      {:cowlib, "~> 1.0.1", override: true},
-      {:ranch, "~> 1.2.0", override: true},
-
-      {:gun, github: "PSPDFKit-labs/gun", only: :test}
-    ]
+    deps() ++
+      [
+        {:cowlib, "~> 1.0.1", override: true},
+        {:ranch, "~> 1.2.0", override: true},
+        {:gun, github: "PSPDFKit-labs/gun", only: :test}
+      ]
   end
+
   defp deps(_), do: deps()
 
   defp docs do
@@ -71,7 +76,7 @@ defmodule Bypass.Mixfile do
       licenses: ["MIT"],
       links: %{
         "GitHub" => @source_url,
-        "PSPDFKit" => "https://pspdfkit.com",
+        "PSPDFKit" => "https://pspdfkit.com"
       }
     ]
   end
