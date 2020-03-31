@@ -1,0 +1,11 @@
+{application,bypass,
+             [{applications,[kernel,stdlib,elixir,logger,ranch,cowboy,plug,
+                             plug_cowboy]},
+              {description,"Bypass provides a quick way to create a custom plug that can be put in place instead of an\nactual HTTP server to return prebaked responses to client requests. This is helpful when you\nwant to create a mock HTTP server and test how your HTTP client handles different types of\nserver responses.\n"},
+              {modules,['Elixir.Bypass','Elixir.Bypass.Application',
+                        'Elixir.Bypass.Instance','Elixir.Bypass.Plug',
+                        'Elixir.Bypass.Utils']},
+              {registered,[]},
+              {vsn,"1.0.0"},
+              {mod,{'Elixir.Bypass.Application',[]}},
+              {env,[{enable_debug_log,false}]}]}.
