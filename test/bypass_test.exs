@@ -10,8 +10,20 @@ defmodule BypassTest do
       ExUnit.CaptureIO.capture_io(:user, fn ->
         fun.()
         Logger.flush()
-      end) |> String.strip
+      end)
+      |> String.strip()
     end
+  end
+
+  test "show ISSUE #51" do
+    Enum.each(
+      1..1000,
+      fn _ ->
+        bypass = %Bypass{} = Bypass.open(port: 8000)
+
+        Bypass.down(bypass)
+      end
+    )
   end
 
   test "Bypass.open can specify a port to operate on with expect" do
@@ -35,7 +47,8 @@ defmodule BypassTest do
     ])
 
     assert {:ok, 200, ""} = request(port)
-    assert {:error, :eaddrinuse} == Bypass.open(port: port)
+    bypass2 = Bypass.open(port: port)
+    assert(is_map(bypass2) and bypass2.__struct__ == Bypass)
   end
 
   test "Bypass.down takes down the socket with expect" do
@@ -47,13 +60,14 @@ defmodule BypassTest do
   end
 
   defp down_socket(expect_fun) do
-    bypass = Bypass.open
+    bypass = Bypass.open()
 
     # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
       bypass,
       fn conn -> Plug.Conn.send_resp(conn, 200, "") end
     ])
+
     assert {:ok, 200, ""} = request(bypass.port)
 
     Bypass.down(bypass)
@@ -61,10 +75,12 @@ defmodule BypassTest do
   end
 
   test "Bypass.up opens the socket again" do
-    bypass = Bypass.open
+    bypass = Bypass.open()
+
     Bypass.expect(bypass, fn conn ->
       Plug.Conn.send_resp(conn, 200, "")
     end)
+
     assert {:ok, 200, ""} = request(bypass.port)
 
     Bypass.down(bypass)
@@ -83,13 +99,14 @@ defmodule BypassTest do
   end
 
   defp not_called(expect_fun) do
-    bypass = Bypass.open
+    bypass = Bypass.open()
 
     # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
       bypass,
       fn _conn -> assert false end
     ])
+
     # Override Bypass' on_exit handler
     ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
       exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
@@ -106,7 +123,7 @@ defmodule BypassTest do
   end
 
   defp pass(expect_fun) do
-    bypass = Bypass.open
+    bypass = Bypass.open()
 
     # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
@@ -118,9 +135,9 @@ defmodule BypassTest do
       end
     ])
 
-    capture_log fn ->
+    capture_log(fn ->
       assert {:error, {:closed, 'The connection was lost.'}} = request(bypass.port)
-    end
+    end)
   end
 
   test "closing a bypass while the request is in-flight with expect" do
@@ -132,16 +149,18 @@ defmodule BypassTest do
   end
 
   defp closing_in_flight(expect_fun) do
-    bypass = Bypass.open
+    bypass = Bypass.open()
 
     # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
       bypass,
       fn _conn ->
-        Bypass.pass(bypass) # mark the request as arrived, since we're shutting it down now
+        # mark the request as arrived, since we're shutting it down now
+        Bypass.pass(bypass)
         Bypass.down(bypass)
       end
     ])
+
     assert {:error, {:closed, 'The connection was lost.'}} == request(bypass.port)
   end
 
@@ -156,7 +175,7 @@ defmodule BypassTest do
   defp down_wait_to_terminate(expect_fun) do
     test_process = self()
     ref = make_ref()
-    bypass = Bypass.open
+    bypass = Bypass.open()
 
     # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
@@ -181,10 +200,12 @@ defmodule BypassTest do
   test "Concurrent calls to down" do
     test_process = self()
     ref = make_ref()
-    bypass = Bypass.open
+    bypass = Bypass.open()
 
     Bypass.expect(
-      bypass, "POST", "/this",
+      bypass,
+      "POST",
+      "/this",
       fn conn ->
         :timer.sleep(200)
         Plug.Conn.send_resp(conn, 200, "")
@@ -192,7 +213,10 @@ defmodule BypassTest do
     )
 
     Bypass.expect(
-      bypass, "POST", "/that", fn conn ->
+      bypass,
+      "POST",
+      "/that",
+      fn conn ->
         :timer.sleep(200)
         result = Plug.Conn.send_resp(conn, 200, "")
         send(test_process, ref)
@@ -202,12 +226,13 @@ defmodule BypassTest do
 
     assert {:ok, 200, ""} = request(bypass.port, "/this")
 
-    tasks = Enum.map(1..5, fn _ ->
-      Task.async(fn ->
-        assert {:ok, 200, ""} = request(bypass.port, "/that")
-        Bypass.down(bypass)
+    tasks =
+      Enum.map(1..5, fn _ ->
+        Task.async(fn ->
+          assert {:ok, 200, ""} = request(bypass.port, "/that")
+          Bypass.down(bypass)
+        end)
       end)
-    end)
 
     # Here we make sure that Bypass.down waits until the plug process finishes its work
     # before shutting down
@@ -223,10 +248,11 @@ defmodule BypassTest do
 
   @tag :wip
   test "Calling a bypass route without expecting a call fails the test" do
-    bypass = Bypass.open
-    capture_log fn ->
+    bypass = Bypass.open()
+
+    capture_log(fn ->
       assert {:ok, 500, ""} = request(bypass.port)
-    end
+    end)
 
     # Override Bypass' on_exit handler
     ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
@@ -236,17 +262,19 @@ defmodule BypassTest do
   end
 
   test "Bypass can handle concurrent requests with expect" do
-    bypass = Bypass.open
+    bypass = Bypass.open()
     parent = self()
 
     Bypass.expect(bypass, fn conn ->
-        send(parent, :request_received)
-        Plug.Conn.send_resp(conn, 200, "")
-      end
-    )
-    tasks = Enum.map(1..5, fn _ ->
-      Task.async(fn -> {:ok, 200, ""} = request(bypass.port) end)
+      send(parent, :request_received)
+      Plug.Conn.send_resp(conn, 200, "")
     end)
+
+    tasks =
+      Enum.map(1..5, fn _ ->
+        Task.async(fn -> {:ok, 200, ""} = request(bypass.port) end)
+      end)
+
     Enum.map(tasks, fn task ->
       Task.await(task)
       assert_receive :request_received
@@ -259,7 +287,7 @@ defmodule BypassTest do
   end
 
   test "Bypass can handle concurrent requests with expect_once" do
-    bypass = Bypass.open
+    bypass = Bypass.open()
     parent = self()
 
     Bypass.expect_once(bypass, fn conn ->
@@ -297,11 +325,14 @@ defmodule BypassTest do
   end
 
   defp set_expectation(action, path) do
-    bypass = Bypass.open
+    bypass = Bypass.open()
     method = "POST"
 
     apply(Bypass, action, [
-      bypass, method, path, fn conn ->
+      bypass,
+      method,
+      path,
+      fn conn ->
         assert conn.method == method
         assert conn.request_path == path
         Plug.Conn.send_resp(conn, 200, "")
@@ -310,22 +341,25 @@ defmodule BypassTest do
   end
 
   defp specific_route(expect_fun) do
-    bypass = Bypass.open
+    bypass = Bypass.open()
     method = "POST"
     path = "/this"
 
     # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
-      bypass, method, path, fn conn ->
+      bypass,
+      method,
+      path,
+      fn conn ->
         assert conn.method == method
         assert conn.request_path == path
         Plug.Conn.send_resp(conn, 200, "")
       end
     ])
 
-    capture_log fn ->
+    capture_log(fn ->
       assert {:ok, 200, ""} = request(bypass.port, path)
-    end
+    end)
   end
 
   test "All routes to a Bypass.expect/4 call must be called" do
@@ -337,14 +371,17 @@ defmodule BypassTest do
   end
 
   defp all_routes_must_be_called(expect_fun) do
-    bypass = Bypass.open
+    bypass = Bypass.open()
     method = "POST"
     paths = ["/this", "/that"]
 
     Enum.each(paths, fn path ->
       # one of Bypass.expect or Bypass.expect_once
       apply(Bypass, expect_fun, [
-        bypass, method, path, fn conn ->
+        bypass,
+        method,
+        path,
+        fn conn ->
           assert conn.method == method
           assert Enum.any?(paths, fn path -> conn.request_path == path end)
           Plug.Conn.send_resp(conn, 200, "")
@@ -352,9 +389,9 @@ defmodule BypassTest do
       ])
     end)
 
-    capture_log fn ->
+    capture_log(fn ->
       assert {:ok, 200, ""} = request(bypass.port, "/this")
-    end
+    end)
 
     # Override Bypass' on_exit handler
     ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
@@ -370,25 +407,33 @@ defmodule BypassTest do
   """
   def request(port, path \\ "/example_path", method \\ :post) do
     {:ok, conn} = :gun.start_link(self(), '127.0.0.1', port, %{retry: 0})
+
     try do
       case :gun.await_up(conn, 250) do
         {:ok, _protocol} ->
-           stream =
-             case method do
-               :post -> :gun.post(conn, path, [], "")
-               :get  -> :gun.get(conn, path, [])
-             end
+          stream =
+            case method do
+              :post -> :gun.post(conn, path, [], "")
+              :get -> :gun.get(conn, path, [])
+            end
 
-           case :gun.await(conn, stream, 250) do
-             {:response, :fin, status, _headers} -> {:ok, status, ""}
-             {:response, :nofin, status, _headers} ->
-               case :gun.await_body(conn, stream, 250) do
-                 {:ok, data} -> {:ok, status, data}
-                 {:error, _} = error -> error
-               end
-             {:error, _} = error -> error
-           end
-        {:error, :timeout} -> raise "Expected gun to die, but it didn't."
+          case :gun.await(conn, stream, 250) do
+            {:response, :fin, status, _headers} ->
+              {:ok, status, ""}
+
+            {:response, :nofin, status, _headers} ->
+              case :gun.await_body(conn, stream, 250) do
+                {:ok, data} -> {:ok, status, data}
+                {:error, _} = error -> error
+              end
+
+            {:error, _} = error ->
+              error
+          end
+
+        {:error, :timeout} ->
+          raise "Expected gun to die, but it didn't."
+
         {:error, :normal} ->
           # `await_up` monitors gun and errors only if gun died (or after `timeout`). That happens
           # when gun can't connect and is out of retries (immediately in our case) so we know that
@@ -404,11 +449,11 @@ defmodule BypassTest do
   end
 
   test "Bypass.expect/4 can be used to define a specific route and then redefined" do
-  :expect |> specific_route_redefined
+    :expect |> specific_route_redefined
   end
 
   test "Bypass.expect_once/4 can be used to define a specific route and then redefined" do
-  :expect_once |> specific_route_redefined
+    :expect_once |> specific_route_redefined
   end
 
   defp specific_route_redefined(expect_fun) do
@@ -449,9 +494,8 @@ defmodule BypassTest do
     end)
   end
 
-
   defp prepare_stubs do
-    bypass = Bypass.open
+    bypass = Bypass.open()
 
     Bypass.expect_once(bypass, fn conn ->
       Plug.Conn.send_resp(conn, 200, "")
@@ -465,7 +509,8 @@ defmodule BypassTest do
   end
 
   test "Bypass.verify_expectations! - with ExUnit it will raise an exception" do
-    bypass = Bypass.open
+    bypass = Bypass.open()
+
     Bypass.expect_once(bypass, fn conn ->
       Plug.Conn.send_resp(conn, 200, "")
     end)
@@ -477,12 +522,12 @@ defmodule BypassTest do
     end
   end
 
-
   test "Bypass.verify_expectations! - with ESpec it will check if the expectations are being met" do
-    Mix.Config.persist bypass: [test_framework: :espec]
+    Mix.Config.persist(bypass: [test_framework: :espec])
 
     # Fail: no requests
     bypass = prepare_stubs()
+
     assert_raise ESpec.AssertionError, "No HTTP request arrived at Bypass", fn ->
       Bypass.verify_expectations!(bypass)
     end
@@ -493,10 +538,10 @@ defmodule BypassTest do
     assert {:ok, 200, ""} = request(bypass.port, "/foo", :get)
     assert :ok = Bypass.verify_expectations!(bypass)
 
-
     # Fail: no requests on a single stub
     bypass = prepare_stubs()
     assert {:ok, 200, ""} = request(bypass.port)
+
     assert_raise ESpec.AssertionError, "No HTTP request arrived at Bypass at GET /foo", fn ->
       Bypass.verify_expectations!(bypass)
     end
@@ -504,15 +549,18 @@ defmodule BypassTest do
     # Fail: too many requests
     bypass = prepare_stubs()
     assert {:ok, 200, ""} = request(bypass.port)
-    Task.start fn ->
+
+    Task.start(fn ->
       assert {:ok, 200, ""} = request(bypass.port)
-    end
+    end)
+
     assert {:ok, 200, ""} = request(bypass.port, "/foo", :get)
     :timer.sleep(10)
+
     assert_raise ESpec.AssertionError, "Expected only one HTTP request for Bypass", fn ->
       Bypass.verify_expectations!(bypass)
     end
 
-    Mix.Config.persist bypass: [test_framework: :ex_unit]
+    Mix.Config.persist(bypass: [test_framework: :ex_unit])
   end
 end
