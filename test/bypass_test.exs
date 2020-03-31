@@ -15,6 +15,16 @@ defmodule BypassTest do
     end
   end
 
+  test "show ISSUE #51" do
+    Enum.each(1..1000,
+      fn (_) ->
+        bypass = %Bypass{} = Bypass.open(port: 8000)
+
+        Bypass.down(bypass)
+      end
+    )
+  end
+
   test "Bypass.open can specify a port to operate on with expect" do
     1234 |> specify_port(:expect)
   end
@@ -36,7 +46,8 @@ defmodule BypassTest do
     ])
 
     assert {:ok, 200, ""} = request(port)
-    assert {:error, :eaddrinuse} == Bypass.open(port: port)
+    bypass2 = Bypass.open(port: port)
+    assert(is_map(bypass2) and bypass2.__struct__ == Bypass)
   end
 
   test "Bypass.down takes down the socket with expect" do
