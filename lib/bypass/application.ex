@@ -4,11 +4,7 @@ defmodule Bypass.Application do
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
 
-    children = [
-      worker(Bypass.Instance, [], restart: :transient)
-    ]
-
-    opts = [strategy: :simple_one_for_one, name: Bypass.Supervisor]
-    Supervisor.start_link(children, opts)
+    opts = [strategy: :one_for_one, name: Bypass.Supervisor]
+    DynamicSupervisor.start_link(opts)
   end
 end

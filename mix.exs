@@ -1,19 +1,27 @@
 defmodule Bypass.Mixfile do
   use Mix.Project
 
+  @version "1.0.0"
+  @source_url "https://github.com/PSPDFKit-labs/bypass"
+
   def project do
-    [app: :bypass,
-     version: "1.0.0",
-     elixir: "~> 1.0",
-     description: description(),
-     package: package(),
-     deps: deps(Mix.env)]
+    [
+      app: :bypass,
+      version: @version,
+      elixir: "~> 1.6",
+      description: description(),
+      package: package(),
+      deps: deps(Mix.env()),
+      docs: docs()
+    ]
   end
 
   def application do
-    [applications: [:logger, :ranch, :cowboy, :plug, :plug_cowboy],
-     mod: {Bypass.Application, []},
-     env: env()]
+    [
+      applications: [:logger, :ranch, :cowboy, :plug, :plug_cowboy],
+      mod: {Bypass.Application, []},
+      env: env()
+    ]
   end
 
   defp deps do
@@ -21,7 +29,7 @@ defmodule Bypass.Mixfile do
       {:plug_cowboy, "~> 1.0 or ~> 2.0"},
       {:plug, "~> 1.7"},
       {:ex_doc, "> 0.0.0", only: :dev},
-      {:espec, "~> 1.6", only: [:dev, :test]},
+      {:espec, "~> 1.6", only: [:dev, :test]}
     ]
   end
 
@@ -30,18 +38,27 @@ defmodule Bypass.Mixfile do
   end
 
   # We need to work around the fact that gun would pull in cowlib/ranch from git, while cowboy/plug
-  # depend on them from hex. In order to resolv this we need to override those dependencies. But
+  # depend on them from hex. In order to resolve this we need to override those dependencies. But
   # since you can't publish to hex with overriden dependencies this ugly hack only pulls the
   # dependencies in when in the test env.
   defp deps(:test) do
-    deps() ++ [
-      {:cowlib, "~> 1.0.1", override: true},
-      {:ranch, "~> 1.2.0", override: true},
+    deps() ++
+      [
+        {:cowlib, "~> 1.0.1", override: true},
+        {:ranch, "~> 1.2.0", override: true},
+        {:gun, github: "PSPDFKit-labs/gun", only: :test}
+      ]
+  end
 
-      {:gun, github: "PSPDFKit-labs/gun", only: :test}
+  defp deps(_), do: deps()
+
+  defp docs do
+    [
+      main: "Bypass",
+      source_url: @source_url,
+      source_ref: "v#{@version}"
     ]
   end
-  defp deps(_), do: deps()
 
   defp description do
     """
@@ -58,8 +75,8 @@ defmodule Bypass.Mixfile do
       maintainers: ["PSPDFKit"],
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/pspdfkit-labs/bypass",
-        "PSPDFKit" => "https://pspdfkit.com",
+        "GitHub" => @source_url,
+        "PSPDFKit" => "https://pspdfkit.com"
       }
     ]
   end
