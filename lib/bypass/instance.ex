@@ -134,24 +134,18 @@ defmodule Bypass.Instance do
     route = {method, path}
 
     updated_expectations =
-      case Map.get(expectations, route, :none) do
-        :none ->
-          Map.put(
-            expectations,
-            route,
-            new_route(
-              fun,
-              case expect do
-                :expect -> :once_or_more
-                :expect_once -> :once
-                :stub -> :none_or_more
-              end
-            )
-          )
-
-        _ ->
-          raise "Route already installed for #{method}, #{path}"
-      end
+      Map.put(
+        expectations,
+        route,
+        new_route(
+          fun,
+          case expect do
+            :expect -> :once_or_more
+            :expect_once -> :once
+            :stub -> :none_or_more
+          end
+        )
+      )
 
     {:reply, :ok, %{state | expectations: updated_expectations}}
   end

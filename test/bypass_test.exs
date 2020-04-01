@@ -16,8 +16,9 @@ defmodule BypassTest do
   end
 
   test "show ISSUE #51" do
-    Enum.each(1..1000,
-      fn (_) ->
+    Enum.each(
+      1..1000,
+      fn _ ->
         bypass = %Bypass{} = Bypass.open(port: 8000)
 
         Bypass.down(bypass)
@@ -445,6 +446,52 @@ defmodule BypassTest do
       Process.exit(conn, :kill)
       assert_receive {:DOWN, ^monitor, :process, ^conn, _}
     end
+  end
+
+  test "Bypass.expect/4 can be used to define a specific route and then redefined" do
+    :expect |> specific_route_redefined
+  end
+
+  test "Bypass.expect_once/4 can be used to define a specific route and then redefined" do
+    :expect_once |> specific_route_redefined
+  end
+
+  defp specific_route_redefined(expect_fun) do
+    bypass = Bypass.open()
+    method = "POST"
+    path = "/this"
+
+    # one of Bypass.expect or Bypass.expect_once
+    apply(Bypass, expect_fun, [
+      bypass,
+      method,
+      path,
+      fn conn ->
+        assert conn.method == method
+        assert conn.request_path == path
+        Plug.Conn.send_resp(conn, 200, "")
+      end
+    ])
+
+    capture_log(fn ->
+      assert {:ok, 200, ""} = request(bypass.port, path)
+    end)
+
+    # redefining the expect
+    apply(Bypass, expect_fun, [
+      bypass,
+      method,
+      path,
+      fn conn ->
+        assert conn.method == method
+        assert conn.request_path == path
+        Plug.Conn.send_resp(conn, 200, "other response")
+      end
+    ])
+
+    capture_log(fn ->
+      assert {:ok, 200, "other response"} = request(bypass.port, path)
+    end)
   end
 
   defp prepare_stubs do
