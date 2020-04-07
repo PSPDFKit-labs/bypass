@@ -1,6 +1,7 @@
 defmodule Bypass.Instance do
   use GenServer, restart: :transient
 
+  alias Bypass.Cert
   import Bypass.Utils
 
   def start_link(opts \\ []) do
@@ -22,15 +23,31 @@ defmodule Bypass.Instance do
 
   def init([opts]) do
     # Get a free port from the OS
-    case :ranch_tcp.listen(so_reuseport() ++ [ip: listen_ip(), port: Keyword.get(opts, :port, 0)]) do
+    {ranch_mod, ranch_opts} =
+      opts
+      |> Keyword.get(:ssl)
+      |> case do
+        true ->
+          {key, {_, cert}} = Cert.generate()
+          {:ranch_ssl, [cert: cert, key: key]}
+
+        _ ->
+          {:ranch_tcp, []}
+      end
+
+    opts = Keyword.merge([ip: listen_ip(), port: Keyword.get(opts, :port, 0)], ranch_opts)
+
+    case ranch_mod.listen(so_reuseport() ++ opts) do
       {:ok, socket} ->
-        {:ok, port} = :inet.port(socket)
-        :erlang.port_close(socket)
+        {:ok, {_address, port}} = ranch_mod.sockname(socket)
+        ranch_mod.close(socket)
 
         ref = make_ref()
-        socket = do_up(port, ref)
+        socket = do_up(ranch_mod, ranch_opts, port, ref)
 
         state = %{
+          ranch_mod: ranch_mod,
+          ranch_opts: ranch_opts,
           expectations: %{},
           port: port,
           ref: ref,
@@ -80,8 +97,13 @@ defmodule Bypass.Instance do
     {:reply, port, state}
   end
 
-  defp do_handle_call(:up, _from, %{port: port, ref: ref, socket: nil} = state) do
-    socket = do_up(port, ref)
+  defp do_handle_call(
+         :up,
+         _from,
+         %{ranch_mod: ranch_mod, ranch_opts: ranch_opts, port: port, ref: ref, socket: nil} =
+           state
+       ) do
+    socket = do_up(ranch_mod, ranch_opts, port, ref)
     {:reply, :ok, %{state | socket: socket}}
   end
 
@@ -96,14 +118,19 @@ defmodule Bypass.Instance do
   defp do_handle_call(
          :down,
          from,
-         %{socket: socket, ref: ref, callers_awaiting_down: callers_awaiting_down} = state
+         %{
+           ranch_mod: ranch_mod,
+           socket: socket,
+           ref: ref,
+           callers_awaiting_down: callers_awaiting_down
+         } = state
        )
        when not is_nil(socket) do
     if retained_plugs_count(state) > 0 do
       # wait for plugs to finish
       {:noreply, %{state | callers_awaiting_down: [from | callers_awaiting_down]}}
     else
-      do_down(ref, socket)
+      do_down(ranch_mod, ref, socket)
       {:reply, :ok, %{state | socket: nil}}
     end
   end
@@ -211,8 +238,8 @@ defmodule Bypass.Instance do
         %{socket: nil} ->
           state
 
-        %{socket: socket, ref: ref} ->
-          do_down(ref, socket)
+        %{ranch_mod: ranch_mod, socket: socket, ref: ref} ->
+          do_down(ranch_mod, ref, socket)
           %{state | socket: nil}
       end
 
@@ -297,29 +324,32 @@ defmodule Bypass.Instance do
     {route, Map.get(expectations, route)}
   end
 
-  defp do_up(port, ref) do
+  defp do_up(ranch_mod, ranch_opts, port, ref) do
     plug_opts = [self()]
-    {:ok, socket} = :ranch_tcp.listen(so_reuseport() ++ [ip: listen_ip(), port: port])
+
+    opts = Keyword.merge([ip: listen_ip(), port: port], ranch_opts)
+    {:ok, socket} = ranch_mod.listen(so_reuseport() ++ opts)
+
     cowboy_opts = cowboy_opts(port, ref, socket)
-    {:ok, _pid} = Plug.Cowboy.http(Bypass.Plug, plug_opts, cowboy_opts)
+
+    if ranch_mod == :ranch_ssl do
+      cowboy_opts = Keyword.merge(cowboy_opts, ranch_opts)
+      {:ok, _pid} = Plug.Cowboy.https(Bypass.Plug, plug_opts, cowboy_opts)
+    else
+      {:ok, _pid} = Plug.Cowboy.http(Bypass.Plug, plug_opts, cowboy_opts)
+    end
+
     socket
   end
 
-  defp do_down(ref, socket) do
+  defp do_down(ranch_mod, ref, socket) do
     :ok = Plug.Cowboy.shutdown(ref)
-
-    # `port_close` is synchronous, so after it has returned we _know_ that the socket has been
-    # closed. If we'd rely on ranch's supervisor shutting down the acceptor processes and thereby
-    # killing the socket we would run into race conditions where the socket port hasn't yet gotten
-    # the EXIT signal and would still be open, thereby breaking tests that rely on a closed socket.
-    case :erlang.port_info(socket, :name) do
-      :undefined -> :ok
-      _ -> :erlang.port_close(socket)
-    end
+    ranch_mod.close(socket)
   end
 
   defp dispatch_awaiting_callers(
          %{
+           ranch_mod: ranch_mod,
            callers_awaiting_down: down_callers,
            callers_awaiting_exit: exit_callers,
            socket: socket,
@@ -329,7 +359,7 @@ defmodule Bypass.Instance do
     if retained_plugs_count(state) == 0 do
       down_reset =
         if length(down_callers) > 0 do
-          do_down(ref, socket)
+          do_down(ranch_mod, ref, socket)
           Enum.each(down_callers, &GenServer.reply(&1, :ok))
           %{state | socket: nil, callers_awaiting_down: []}
         end

@@ -19,7 +19,7 @@ defmodule BypassTest do
     Enum.each(
       1..1000,
       fn _ ->
-        bypass = %Bypass{} = Bypass.open(port: 8000)
+        {:ok, bypass = %Bypass{}} = Bypass.open(port: 8000)
 
         Bypass.down(bypass)
       end
@@ -35,7 +35,7 @@ defmodule BypassTest do
   end
 
   defp specify_port(port, expect_fun) do
-    bypass = Bypass.open(port: port)
+    {:ok, bypass} = Bypass.open(port: port)
 
     # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
@@ -47,7 +47,7 @@ defmodule BypassTest do
     ])
 
     assert {:ok, 200, ""} = request(port)
-    bypass2 = Bypass.open(port: port)
+    {:ok, bypass2} = Bypass.open(port: port)
     assert(is_map(bypass2) and bypass2.__struct__ == Bypass)
   end
 
@@ -60,7 +60,7 @@ defmodule BypassTest do
   end
 
   defp down_socket(expect_fun) do
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
 
     # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
@@ -75,7 +75,7 @@ defmodule BypassTest do
   end
 
   test "Bypass.up opens the socket again" do
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
 
     Bypass.expect(bypass, fn conn ->
       Plug.Conn.send_resp(conn, 200, "")
@@ -99,7 +99,7 @@ defmodule BypassTest do
   end
 
   defp not_called(expect_fun) do
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
 
     # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
@@ -123,7 +123,7 @@ defmodule BypassTest do
   end
 
   defp pass(expect_fun) do
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
 
     # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
@@ -149,7 +149,7 @@ defmodule BypassTest do
   end
 
   defp closing_in_flight(expect_fun) do
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
 
     # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
@@ -175,7 +175,7 @@ defmodule BypassTest do
   defp down_wait_to_terminate(expect_fun) do
     test_process = self()
     ref = make_ref()
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
 
     # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
@@ -200,7 +200,7 @@ defmodule BypassTest do
   test "Concurrent calls to down" do
     test_process = self()
     ref = make_ref()
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
 
     Bypass.expect(
       bypass,
@@ -248,7 +248,7 @@ defmodule BypassTest do
 
   @tag :wip
   test "Calling a bypass route without expecting a call fails the test" do
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
 
     capture_log(fn ->
       assert {:ok, 500, ""} = request(bypass.port)
@@ -262,7 +262,7 @@ defmodule BypassTest do
   end
 
   test "Bypass can handle concurrent requests with expect" do
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
     parent = self()
 
     Bypass.expect(bypass, fn conn ->
@@ -287,7 +287,7 @@ defmodule BypassTest do
   end
 
   test "Bypass can handle concurrent requests with expect_once" do
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
     parent = self()
 
     Bypass.expect_once(bypass, fn conn ->
@@ -325,7 +325,7 @@ defmodule BypassTest do
   end
 
   defp set_expectation(action, path) do
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
     method = "POST"
 
     apply(Bypass, action, [
@@ -341,7 +341,7 @@ defmodule BypassTest do
   end
 
   defp specific_route(expect_fun) do
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
     method = "POST"
     path = "/this"
 
@@ -371,7 +371,7 @@ defmodule BypassTest do
   end
 
   defp all_routes_must_be_called(expect_fun) do
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
     method = "POST"
     paths = ["/this", "/that"]
 
@@ -457,7 +457,7 @@ defmodule BypassTest do
   end
 
   defp specific_route_redefined(expect_fun) do
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
     method = "POST"
     path = "/this"
 
@@ -495,7 +495,7 @@ defmodule BypassTest do
   end
 
   defp prepare_stubs do
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
 
     Bypass.expect_once(bypass, fn conn ->
       Plug.Conn.send_resp(conn, 200, "")
@@ -509,7 +509,7 @@ defmodule BypassTest do
   end
 
   test "Bypass.verify_expectations! - with ExUnit it will raise an exception" do
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
 
     Bypass.expect_once(bypass, fn conn ->
       Plug.Conn.send_resp(conn, 200, "")
