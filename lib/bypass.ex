@@ -9,6 +9,11 @@ defmodule Bypass do
 
   defstruct pid: nil, port: nil
 
+  @typedoc """
+  Represents a Bypass server process
+  """
+  @type t :: %__MODULE__{pid: pid, port: non_neg_integer}
+
   import Bypass.Utils
   require Logger
 
@@ -98,9 +103,19 @@ defmodule Bypass do
     end
   end
 
+  @doc """
+  Re-opens the TCP socket on the same port.
+  Blocks until the operation is complete.
+  """
+  @spec up(Bypass.t()) :: :ok | {:error, :already_up}
   def up(%Bypass{pid: pid}),
     do: Bypass.Instance.call(pid, :up)
 
+  @doc """
+  Closes the TCP socket.
+  Blocks until the operation is complete.
+  """
+  @spec down(Bypass.t()) :: :ok | {:error, :already_down}
   def down(%Bypass{pid: pid}),
     do: Bypass.Instance.call(pid, :down)
 
