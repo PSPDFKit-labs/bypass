@@ -308,29 +308,25 @@ defmodule Bypass.Instance do
     {route, Map.get(expectations, route)}
   end
 
-  defp match_route(path, route) do
-    case length(path) == length(route) do
-      true ->
-        path
-        |> Enum.zip(route)
-        |> Enum.reduce_while(
-          {true, %{}},
-          fn
-            {value, {param, _, _}}, {_, params} ->
-              {:cont, {true, Map.put(params, Atom.to_string(param), value)}}
+  defp match_route(path, route) when length(path) == length(route) do
+    path
+    |> Enum.zip(route)
+    |> Enum.reduce_while(
+      {true, %{}},
+      fn
+        {value, {param, _, _}}, {_, params} ->
+          {:cont, {true, Map.put(params, Atom.to_string(param), value)}}
 
-            {segment, segment}, acc ->
-              {:cont, acc}
+        {segment, segment}, acc ->
+          {:cont, acc}
 
-            _, _ ->
-              {:halt, {false, nil}}
-          end
-        )
-
-      false ->
-        {false, nil}
-    end
+        _, _ ->
+          {:halt, {false, nil}}
+      end
+    )
   end
+
+  defp match_route(_, _), do: {false, nil}
 
   defp do_up(port, ref) do
     plug_opts = [self()]
