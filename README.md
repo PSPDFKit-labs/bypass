@@ -27,13 +27,6 @@ Bypass supports Elixir 1.6 and OTP 20 and up. It works with Cowboy 1 and 2.
 
 ## Usage
 
-Start Bypass in your `test/test_helper.exs` file to make it available in tests:
-
-```elixir
-ExUnit.start()
-Application.ensure_all_started(:bypass)
-```
-
 To use Bypass in a test case, open a connection and use its port to connect your client to it.
 
 If you want to test what happens when the HTTP server goes down, use `Bypass.down/1` to close the
