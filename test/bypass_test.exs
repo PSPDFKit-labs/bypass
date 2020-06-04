@@ -362,6 +362,49 @@ defmodule BypassTest do
     end)
   end
 
+  test "Bypass.stub/4 does not raise if request with parameters is made" do
+    :stub |> specific_route_with_params
+  end
+
+  test "Bypass.expect/4 can be used to define a specific route with parameters" do
+    :expect |> specific_route_with_params
+  end
+
+  test "Bypass.expect_once/4 can be used to define a specific route with parameters" do
+    :expect_once |> specific_route_with_params
+  end
+
+  defp specific_route_with_params(expect_fun) do
+    bypass = Bypass.open()
+    method = "POST"
+    pattern = "/this/:resource/get/:id"
+    path = "/this/my_resource/get/1234"
+
+    # one of Bypass.expect or Bypass.expect_once
+    apply(Bypass, expect_fun, [
+      bypass,
+      method,
+      pattern,
+      fn conn ->
+        assert conn.method == method
+        assert conn.request_path == path
+
+        assert conn.params == %{
+                 "resource" => "my_resource",
+                 "id" => "1234",
+                 "q_param_1" => "a",
+                 "q_param_2" => "b"
+               }
+
+        Plug.Conn.send_resp(conn, 200, "")
+      end
+    ])
+
+    capture_log(fn ->
+      assert {:ok, 200, ""} = request(bypass.port, path <> "?q_param_1=a&q_param_2=b")
+    end)
+  end
+
   test "All routes to a Bypass.expect/4 call must be called" do
     :expect |> all_routes_must_be_called
   end
