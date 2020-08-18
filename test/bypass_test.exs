@@ -71,7 +71,7 @@ defmodule BypassTest do
     assert {:ok, 200, ""} = request(bypass.port)
 
     Bypass.down(bypass)
-    assert {:error, :noconnect} = request(bypass.port)
+    assert {:error, %Mint.TransportError{reason: :econnrefused}} = request(bypass.port)
   end
 
   test "Bypass.up opens the socket again" do
@@ -84,7 +84,7 @@ defmodule BypassTest do
     assert {:ok, 200, ""} = request(bypass.port)
 
     Bypass.down(bypass)
-    assert {:error, :noconnect} = request(bypass.port)
+    assert {:error, %Mint.TransportError{reason: :econnrefused}} = request(bypass.port)
 
     Bypass.up(bypass)
     assert {:ok, 200, ""} = request(bypass.port)
@@ -136,7 +136,8 @@ defmodule BypassTest do
     ])
 
     capture_log(fn ->
-      assert {:error, {:closed, 'The connection was lost.'}} = request(bypass.port)
+      assert {:error, _conn, %Mint.TransportError{reason: :closed}, _responses} =
+               request(bypass.port)
     end)
   end
 
@@ -161,7 +162,8 @@ defmodule BypassTest do
       end
     ])
 
-    assert {:error, {:closed, 'The connection was lost.'}} == request(bypass.port)
+    assert {:error, _conn, %Mint.TransportError{reason: :closed}, _responses} =
+             request(bypass.port)
   end
 
   test "Bypass.down waits for plug process to terminate before shutting it down with expect" do
@@ -448,46 +450,43 @@ defmodule BypassTest do
   "high-level" HTTP client, since they do connection pooling and we will sometimes get a connection
   closed error and not a failed to connect error, when we test Bypass.down
   """
-  def request(port, path \\ "/example_path", method \\ :post) do
-    {:ok, conn} = :gun.start_link(self(), '127.0.0.1', port, %{retry: 0})
+  def request(port, path \\ "/example_path", method \\ "POST") do
+    with {:ok, conn} <- Mint.HTTP.connect(:http, "127.0.0.1", port),
+         {:ok, conn, ref} = Mint.HTTP.request(conn, method, path, [], "") do
+      receive_responses(conn, ref, 100, [])
+    end
+  end
 
-    try do
-      case :gun.await_up(conn, 250) do
-        {:ok, _protocol} ->
-          stream =
-            case method do
-              :post -> :gun.post(conn, path, [], "")
-              :get -> :gun.get(conn, path, [])
-            end
+  defp receive_responses(conn, ref, status, body) do
+    receive do
+      message ->
+        with {:ok, conn, responses} <- Mint.HTTP.stream(conn, message) do
+          receive_responses(responses, conn, ref, status, body)
+        end
+    end
+  end
 
-          case :gun.await(conn, stream, 250) do
-            {:response, :fin, status, _headers} ->
-              {:ok, status, ""}
+  defp receive_responses([], conn, ref, status, body) do
+    receive_responses(conn, ref, status, body)
+  end
 
-            {:response, :nofin, status, _headers} ->
-              case :gun.await_body(conn, stream, 250) do
-                {:ok, data} -> {:ok, status, data}
-                {:error, _} = error -> error
-              end
+  defp receive_responses([response | responses], conn, ref, status, body) do
+    case response do
+      {:status, ^ref, status} ->
+        receive_responses(responses, conn, ref, status, body)
 
-            {:error, _} = error ->
-              error
-          end
+      {:headers, ^ref, _headers} ->
+        receive_responses(responses, conn, ref, status, body)
 
-        {:error, :timeout} ->
-          raise "Expected gun to die, but it didn't."
+      {:data, ^ref, data} ->
+        receive_responses(responses, conn, ref, status, [data | body])
 
-        {:error, :normal} ->
-          # `await_up` monitors gun and errors only if gun died (or after `timeout`). That happens
-          # when gun can't connect and is out of retries (immediately in our case) so we know that
-          # gun is dead.
-          {:error, :noconnect}
-      end
-    after
-      Process.unlink(conn)
-      monitor = Process.monitor(conn)
-      Process.exit(conn, :kill)
-      assert_receive {:DOWN, ^monitor, :process, ^conn, _}
+      {:done, ^ref} ->
+        _ = Mint.HTTP.close(conn)
+        {:ok, status, body |> Enum.reverse() |> IO.iodata_to_binary()}
+
+      {:error, ^ref, _reason} = error ->
+        error
     end
   end
 
@@ -578,7 +577,7 @@ defmodule BypassTest do
     # Success
     bypass = prepare_stubs()
     assert {:ok, 200, ""} = request(bypass.port)
-    assert {:ok, 200, ""} = request(bypass.port, "/foo", :get)
+    assert {:ok, 200, ""} = request(bypass.port, "/foo", "GET")
     assert :ok = Bypass.verify_expectations!(bypass)
 
     # Fail: no requests on a single stub
@@ -597,7 +596,7 @@ defmodule BypassTest do
       assert {:ok, 200, ""} = request(bypass.port)
     end)
 
-    assert {:ok, 200, ""} = request(bypass.port, "/foo", :get)
+    assert {:ok, 200, ""} = request(bypass.port, "/foo", "GET")
     :timer.sleep(10)
 
     assert_raise ESpec.AssertionError, "Expected only one HTTP request for Bypass", fn ->
