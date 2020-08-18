@@ -450,9 +450,7 @@ defmodule BypassTest do
   "high-level" HTTP client, since they do connection pooling and we will sometimes get a connection
   closed error and not a failed to connect error, when we test Bypass.down
   """
-  def request(port, path \\ "/example_path", method \\ :post) do
-    method = method |> Atom.to_string() |> String.upcase()
-
+  def request(port, path \\ "/example_path", method \\ "POST") do
     with {:ok, conn} <- Mint.HTTP.connect(:http, "127.0.0.1", port),
          {:ok, conn, ref} = Mint.HTTP.request(conn, method, path, [], "") do
       receive_responses(conn, ref, 100, [])
@@ -579,7 +577,7 @@ defmodule BypassTest do
     # Success
     bypass = prepare_stubs()
     assert {:ok, 200, ""} = request(bypass.port)
-    assert {:ok, 200, ""} = request(bypass.port, "/foo", :get)
+    assert {:ok, 200, ""} = request(bypass.port, "/foo", "GET")
     assert :ok = Bypass.verify_expectations!(bypass)
 
     # Fail: no requests on a single stub
@@ -598,7 +596,7 @@ defmodule BypassTest do
       assert {:ok, 200, ""} = request(bypass.port)
     end)
 
-    assert {:ok, 200, ""} = request(bypass.port, "/foo", :get)
+    assert {:ok, 200, ""} = request(bypass.port, "/foo", "GET")
     :timer.sleep(10)
 
     assert_raise ESpec.AssertionError, "Expected only one HTTP request for Bypass", fn ->
