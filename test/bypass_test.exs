@@ -2,18 +2,7 @@ defmodule BypassTest do
   use ExUnit.Case
   doctest Bypass
 
-  if Code.ensure_loaded?(ExUnit.CaptureLog) do
-    defdelegate capture_log(fun), to: ExUnit.CaptureLog
-  else
-    # Shim capture_log for Elixir 1.0
-    defp capture_log(fun) do
-      ExUnit.CaptureIO.capture_io(:user, fn ->
-        fun.()
-        Logger.flush()
-      end)
-      |> String.strip()
-    end
-  end
+  defdelegate capture_log(fun), to: ExUnit.CaptureLog
 
   test "show ISSUE #51" do
     Enum.each(
