@@ -11,7 +11,7 @@ defmodule Bypass.Mixfile do
       elixir: "~> 1.6",
       description: description(),
       package: package(),
-      deps: deps(Mix.env()),
+      deps: deps(),
       docs: docs()
     ]
   end
@@ -28,29 +28,17 @@ defmodule Bypass.Mixfile do
     [
       {:plug_cowboy, "~> 1.0 or ~> 2.0"},
       {:plug, "~> 1.7"},
+      {:cowlib, "~> 1.0.1"},
+      {:ranch, "~> 1.3.2"},
       {:ex_doc, "> 0.0.0", only: :dev},
-      {:espec, "~> 1.6", only: [:dev, :test]}
+      {:espec, "~> 1.6", only: [:dev, :test]},
+      {:mint, "~> 1.1", only: :test}
     ]
   end
 
   defp env do
     [enable_debug_log: false]
   end
-
-  # We need to work around the fact that gun would pull in cowlib/ranch from git, while cowboy/plug
-  # depend on them from hex. In order to resolve this we need to override those dependencies. But
-  # since you can't publish to hex with overriden dependencies this ugly hack only pulls the
-  # dependencies in when in the test env.
-  defp deps(:test) do
-    deps() ++
-      [
-        {:cowlib, "~> 1.0.1", override: true},
-        {:ranch, "~> 1.2.0", override: true},
-        {:gun, github: "PSPDFKit-labs/gun", only: :test}
-      ]
-  end
-
-  defp deps(_), do: deps()
 
   defp docs do
     [

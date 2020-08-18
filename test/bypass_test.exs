@@ -71,7 +71,7 @@ defmodule BypassTest do
     assert {:ok, 200, ""} = request(bypass.port)
 
     Bypass.down(bypass)
-    assert {:error, :noconnect} = request(bypass.port)
+    assert {:error, %Mint.TransportError{reason: :econnrefused}} = request(bypass.port)
   end
 
   test "Bypass.up opens the socket again" do
@@ -84,7 +84,7 @@ defmodule BypassTest do
     assert {:ok, 200, ""} = request(bypass.port)
 
     Bypass.down(bypass)
-    assert {:error, :noconnect} = request(bypass.port)
+    assert {:error, %Mint.TransportError{reason: :econnrefused}} = request(bypass.port)
 
     Bypass.up(bypass)
     assert {:ok, 200, ""} = request(bypass.port)
@@ -136,7 +136,8 @@ defmodule BypassTest do
     ])
 
     capture_log(fn ->
-      assert {:error, {:closed, 'The connection was lost.'}} = request(bypass.port)
+      assert {:error, _conn, %Mint.TransportError{reason: :closed}, _responses} =
+               request(bypass.port)
     end)
   end
 
@@ -161,7 +162,8 @@ defmodule BypassTest do
       end
     ])
 
-    assert {:error, {:closed, 'The connection was lost.'}} == request(bypass.port)
+    assert {:error, _conn, %Mint.TransportError{reason: :closed}, _responses} =
+             request(bypass.port)
   end
 
   test "Bypass.down waits for plug process to terminate before shutting it down with expect" do
@@ -449,45 +451,44 @@ defmodule BypassTest do
   closed error and not a failed to connect error, when we test Bypass.down
   """
   def request(port, path \\ "/example_path", method \\ :post) do
-    {:ok, conn} = :gun.start_link(self(), '127.0.0.1', port, %{retry: 0})
+    method = method |> Atom.to_string() |> String.upcase()
 
-    try do
-      case :gun.await_up(conn, 250) do
-        {:ok, _protocol} ->
-          stream =
-            case method do
-              :post -> :gun.post(conn, path, [], "")
-              :get -> :gun.get(conn, path, [])
-            end
+    with {:ok, conn} <- Mint.HTTP.connect(:http, "127.0.0.1", port),
+         {:ok, conn, ref} = Mint.HTTP.request(conn, method, path, [], "") do
+      result = receive_responses(conn, ref)
+      {:ok, _conn} = Mint.HTTP.close(conn)
+      result
+    end
+  end
 
-          case :gun.await(conn, stream, 250) do
-            {:response, :fin, status, _headers} ->
-              {:ok, status, ""}
+  defp receive_responses(conn, ref, result \\ %{done: false, status: 100, body: []}) do
+    receive do
+      message ->
+        with {:ok, conn, responses} <- Mint.HTTP.stream(conn, message),
+             %{} = result <-
+               Enum.reduce(responses, result, fn response, result ->
+                 case response do
+                   {:status, ^ref, status} ->
+                     %{result | status: status}
 
-            {:response, :nofin, status, _headers} ->
-              case :gun.await_body(conn, stream, 250) do
-                {:ok, data} -> {:ok, status, data}
-                {:error, _} = error -> error
-              end
+                   {:headers, ^ref, _headers} ->
+                     result
 
-            {:error, _} = error ->
-              error
+                   {:data, ^ref, data} ->
+                     %{result | body: result.body ++ [data]}
+
+                   {:done, ^ref} ->
+                     %{result | done: true}
+
+                   {:error, ^ref, _reason} = error ->
+                     error
+                 end
+               end) do
+          case result do
+            %{done: true} -> {:ok, result.status, Enum.join(result.body)}
+            %{done: false} -> receive_responses(conn, ref, result)
           end
-
-        {:error, :timeout} ->
-          raise "Expected gun to die, but it didn't."
-
-        {:error, :normal} ->
-          # `await_up` monitors gun and errors only if gun died (or after `timeout`). That happens
-          # when gun can't connect and is out of retries (immediately in our case) so we know that
-          # gun is dead.
-          {:error, :noconnect}
-      end
-    after
-      Process.unlink(conn)
-      monitor = Process.monitor(conn)
-      Process.exit(conn, :kill)
-      assert_receive {:DOWN, ^monitor, :process, ^conn, _}
+        end
     end
   end
 
