@@ -432,7 +432,7 @@ defmodule BypassTest do
   """
   def request(port, path \\ "/example_path", method \\ "POST") do
     with {:ok, conn} <- Mint.HTTP.connect(:http, "127.0.0.1", port),
-         {:ok, conn, ref} = Mint.HTTP.request(conn, method, path, [], "") do
+         {:ok, conn, ref} <- Mint.HTTP.request(conn, method, path, [], "") do
       receive_responses(conn, ref, 100, [])
     end
   end

@@ -266,7 +266,7 @@ defmodule Bypass.Instance do
     problem_route =
       expectations
       |> Enum.reject(fn {_route, expectations} -> expectations[:expected] == :none_or_more end)
-      |> Enum.find(fn {_route, expectations} -> length(expectations.results) == 0 end)
+      |> Enum.find(fn {_route, expectations} -> Enum.empty?(expectations.results) end)
 
     case problem_route do
       {route, _} ->
@@ -436,7 +436,7 @@ defmodule Bypass.Instance do
   defp so_reuseport() do
     case :os.type() do
       {:unix, :linux} -> [{:raw, 1, 15, <<1::32-native>>}]
-      {:unix, :darwin} -> [{:raw, 65535, 512, <<1::32-native>>}]
+      {:unix, :darwin} -> [{:raw, 65_535, 512, <<1::32-native>>}]
       _ -> []
     end
   end
