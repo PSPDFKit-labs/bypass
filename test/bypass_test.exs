@@ -455,40 +455,40 @@ defmodule BypassTest do
 
     with {:ok, conn} <- Mint.HTTP.connect(:http, "127.0.0.1", port),
          {:ok, conn, ref} = Mint.HTTP.request(conn, method, path, [], "") do
-      result = receive_responses(conn, ref)
-      {:ok, _conn} = Mint.HTTP.close(conn)
-      result
+      receive_responses(conn, ref, 100, [])
     end
   end
 
-  defp receive_responses(conn, ref, result \\ %{done: false, status: 100, body: []}) do
+  defp receive_responses(conn, ref, status, body) do
     receive do
       message ->
-        with {:ok, conn, responses} <- Mint.HTTP.stream(conn, message),
-             %{} = result <-
-               Enum.reduce(responses, result, fn response, result ->
-                 case response do
-                   {:status, ^ref, status} ->
-                     %{result | status: status}
-
-                   {:headers, ^ref, _headers} ->
-                     result
-
-                   {:data, ^ref, data} ->
-                     %{result | body: result.body ++ [data]}
-
-                   {:done, ^ref} ->
-                     %{result | done: true}
-
-                   {:error, ^ref, _reason} = error ->
-                     error
-                 end
-               end) do
-          case result do
-            %{done: true} -> {:ok, result.status, Enum.join(result.body)}
-            %{done: false} -> receive_responses(conn, ref, result)
-          end
+        with {:ok, conn, responses} <- Mint.HTTP.stream(conn, message) do
+          receive_responses(responses, conn, ref, status, body)
         end
+    end
+  end
+
+  defp receive_responses([], conn, ref, status, body) do
+    receive_responses(conn, ref, status, body)
+  end
+
+  defp receive_responses([response | responses], conn, ref, status, body) do
+    case response do
+      {:status, ^ref, status} ->
+        receive_responses(responses, conn, ref, status, body)
+
+      {:headers, ^ref, _headers} ->
+        receive_responses(responses, conn, ref, status, body)
+
+      {:data, ^ref, data} ->
+        receive_responses(responses, conn, ref, status, [data | body])
+
+      {:done, ^ref} ->
+        _ = Mint.HTTP.close(conn)
+        {:ok, status, body |> Enum.reverse() |> IO.iodata_to_binary()}
+
+      {:error, ^ref, _reason} = error ->
+        error
     end
   end
 
