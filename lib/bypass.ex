@@ -1,8 +1,8 @@
 defmodule Bypass do
   @moduledoc """
-  Bypass provides a quick way to create a custom Plug that can be put
-  in place instead of an actual HTTP server to return prebaked responses
-  to client requests.
+  Bypass provides a quick way to create a custom Plug that can be put in place
+  instead of an actual HTTP server to return prebaked responses to client
+  requests.
 
   This module is the main interface to the library.
   """
@@ -10,7 +10,7 @@ defmodule Bypass do
   defstruct pid: nil, port: nil
 
   @typedoc """
-  Represents a Bypass server process
+  Represents a Bypass server process.
   """
   @type t :: %__MODULE__{pid: pid, port: non_neg_integer}
 
@@ -18,11 +18,11 @@ defmodule Bypass do
   require Logger
 
   @doc """
-  Starts an Elixir process running a minimal Plug app. The process
-  is a HTTP handler and listens to requests on a TCP port on localhost.
+  Starts an Elixir process running a minimal Plug app. The process is a HTTP
+  handler and listens to requests on a TCP port on localhost.
 
-  Use the other functions in this module to declare which requests are
-  handled and set expectations on the calls.
+  Use the other functions in this module to declare which requests are handled
+  and set expectations on the calls.
   """
   def open(opts \\ []) do
     case DynamicSupervisor.start_child(Bypass.Supervisor, Bypass.Instance.child_spec(opts)) do
@@ -38,8 +38,6 @@ defmodule Bypass do
     end
   end
 
-  # Raise an error if called with an unknown framework
-  #
   defp setup_framework_integration(:ex_unit, bypass = %{pid: pid}) do
     ExUnit.Callbacks.on_exit({Bypass, pid}, fn ->
       do_verify_expectations(bypass.pid, ExUnit.AssertionError)
@@ -47,12 +45,11 @@ defmodule Bypass do
   end
 
   defp setup_framework_integration(:espec, _bypass) do
-    # Entry point for more advanced ESpec configurations
   end
 
   @doc """
-  Can be called to immediately verify if the declared request
-  expectations have been met.
+  Can be called to immediately verify if the declared request expectations have
+  been met.
 
   Returns `:ok` on success and raises an error on failure.
   """
@@ -104,16 +101,15 @@ defmodule Bypass do
   end
 
   @doc """
-  Re-opens the TCP socket on the same port.
-  Blocks until the operation is complete.
+  Re-opens the TCP socket on the same port. Blocks until the operation is
+  complete.
   """
   @spec up(Bypass.t()) :: :ok | {:error, :already_up}
   def up(%Bypass{pid: pid}),
     do: Bypass.Instance.call(pid, :up)
 
   @doc """
-  Closes the TCP socket.
-  Blocks until the operation is complete.
+  Closes the TCP socket. Blocks until the operation is complete.
   """
   @spec down(Bypass.t()) :: :ok | {:error, :already_down}
   def down(%Bypass{pid: pid}),
