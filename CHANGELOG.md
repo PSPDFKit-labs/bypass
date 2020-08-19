@@ -1,6 +1,16 @@
 Changelog
 =========
 
+## v2.0.0 - TBA
+
+  * Allow the redefinition of routes.
+  * Make listen interface configurable.
+  * Add SO_REUSEPORT.
+  * Add support for parametric routes.
+  * Switch from :simple_one_for_one to DynamicSupervisor.
+  * Require at least Elixir 1.6.
+  * Replace gun with mint.
+
 ## v1.0.0 - 26 Nov 2018
 
   * Support for Plug 1.7 with `plug_cowboy` 1 and 2.
