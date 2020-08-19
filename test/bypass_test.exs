@@ -498,7 +498,7 @@ defmodule BypassTest do
       assert {:ok, 200, ""} = request(bypass.port, path)
     end)
 
-    # Redfine the expect
+    # Redefine the expect
     apply(Bypass, expect_fun, [
       bypass,
       method,
