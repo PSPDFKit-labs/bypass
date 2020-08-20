@@ -1,4 +1,6 @@
 defmodule Bypass.Plug do
+  @moduledoc false
+
   def init([pid]), do: pid
 
   def call(%{method: method, request_path: request_path} = conn, pid) do
