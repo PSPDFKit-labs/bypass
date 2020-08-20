@@ -115,13 +115,12 @@ defmodule BypassTest do
       bypass,
       fn _conn ->
         Bypass.pass(bypass)
-        Process.exit(self(), :normal)
-        assert false
+        Process.exit(self(), :shutdown)
       end
     ])
 
     capture_log(fn ->
-      assert {:error, _conn, %Mint.TransportError{reason: :closed}, _responses} =
+      assert {:error, _conn, %Mint.TransportError{reason: :timeout}, _responses} =
                request(bypass.port)
     end)
   end
@@ -166,8 +165,9 @@ defmodule BypassTest do
     apply(Bypass, expect_fun, [
       bypass,
       fn conn ->
+        Process.flag(:trap_exit, true)
         result = Plug.Conn.send_resp(conn, 200, "")
-        :timer.sleep(200)
+        Process.sleep(200)
         send(test_process, ref)
         result
       end
@@ -192,7 +192,7 @@ defmodule BypassTest do
       "POST",
       "/this",
       fn conn ->
-        :timer.sleep(200)
+        Process.sleep(100)
         Plug.Conn.send_resp(conn, 200, "")
       end
     )
@@ -202,7 +202,7 @@ defmodule BypassTest do
       "POST",
       "/that",
       fn conn ->
-        :timer.sleep(200)
+        Process.sleep(100)
         result = Plug.Conn.send_resp(conn, 200, "")
         send(test_process, ref)
         result
@@ -222,7 +222,7 @@ defmodule BypassTest do
     # Here we make sure that Bypass.down waits until the plug process finishes
     # its work before shutting down.
     refute_received ^ref
-    :timer.sleep(200)
+    Process.sleep(200)
     Bypass.down(bypass)
 
     Enum.map(tasks, fn task ->
@@ -431,18 +431,15 @@ defmodule BypassTest do
   closed error and not a failed to connect error, when we test Bypass.down.
   """
   def request(port, path \\ "/example_path", method \\ "POST") do
-    with {:ok, conn} <- Mint.HTTP.connect(:http, "127.0.0.1", port),
+    with {:ok, conn} <- Mint.HTTP.connect(:http, "127.0.0.1", port, mode: :passive),
          {:ok, conn, ref} <- Mint.HTTP.request(conn, method, path, [], "") do
       receive_responses(conn, ref, 100, [])
     end
   end
 
   defp receive_responses(conn, ref, status, body) do
-    receive do
-      message ->
-        with {:ok, conn, responses} <- Mint.HTTP.stream(conn, message) do
-          receive_responses(responses, conn, ref, status, body)
-        end
+    with {:ok, conn, responses} <- Mint.HTTP.recv(conn, 0, 200) do
+      receive_responses(responses, conn, ref, status, body)
     end
   end
 

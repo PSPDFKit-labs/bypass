@@ -41,7 +41,8 @@ defmodule Bypass.Instance do
           callers_awaiting_down: [],
           callers_awaiting_exit: [],
           pass: false,
-          unknown_route_error: nil
+          unknown_route_error: nil,
+          monitors: %{}
         }
 
         {:ok, state}
@@ -51,32 +52,24 @@ defmodule Bypass.Instance do
     end
   end
 
+  def handle_info({:DOWN, ref, _, _, reason}, state) do
+    case pop_in(state.monitors[ref]) do
+      {nil, state} ->
+        {:noreply, state}
+
+      {route, state} ->
+        result = {:exit, {:exit, reason, []}}
+        {:noreply, route |> put_result(ref, result, state) |> dispatch_awaiting_callers()}
+    end
+  end
+
+  def handle_cast({:put_expect_result, route, ref, result}, state) do
+    {:noreply, route |> put_result(ref, result, state) |> dispatch_awaiting_callers()}
+  end
+
   def handle_call(request, from, state) do
     debug_log([inspect(self()), " called ", inspect(request), " with state ", inspect(state)])
     do_handle_call(request, from, state)
-  end
-
-  def handle_cast({:retain_plug_process, {method, path} = route, ref, caller_pid}, state) do
-    debug_log([
-      inspect(self()),
-      " retain_plug_process ",
-      inspect(caller_pid),
-      ", retained_plugs: ",
-      inspect(
-        Map.get(state.expectations, route)
-        |> Map.get(:retained_plugs)
-        |> Map.values()
-      )
-    ])
-
-    updated_state =
-      update_in(state[:expectations][route][:retained_plugs], fn plugs ->
-        Map.update(plugs, ref, caller_pid, fn _ ->
-          raise "plug already installed for #{method} #{path}"
-        end)
-      end)
-
-    {:noreply, updated_state}
   end
 
   defp do_handle_call(:port, _, %{port: port} = state) do
@@ -177,7 +170,7 @@ defmodule Bypass.Instance do
 
   defp do_handle_call(
          {:get_expect_fun, route},
-         _from,
+         from,
          %{expectations: expectations} = state
        ) do
     case Map.get(expectations, route) do
@@ -188,16 +181,10 @@ defmodule Bypass.Instance do
         {:reply, {:error, :unexpected_request, route}, state}
 
       route_expectations ->
-        {:reply, route_expectations.fun, increase_route_count(state, route)}
+        state = increase_route_count(state, route)
+        {ref, state} = retain_plug_process(route, from, state)
+        {:reply, {:ok, ref, route_expectations.fun}, state}
     end
-  end
-
-  defp do_handle_call({:put_expect_result, route, ref, result}, _from, state) do
-    updated_state =
-      put_result(route, ref, result, state)
-      |> dispatch_awaiting_callers()
-
-    {:reply, :ok, updated_state}
   end
 
   defp do_handle_call(:on_exit, from, %{callers_awaiting_exit: callers} = state) do
@@ -239,25 +226,25 @@ defmodule Bypass.Instance do
   end
 
   defp put_result(route, ref, result, state) do
-    case get_in(state, [:expectations, route]) do
-      nil ->
-        Map.put(state, :unknown_route_error, result)
+    if state.expectations[route] do
+      {_, state} = pop_in(state.monitors[ref])
 
-      _ ->
-        update_in(state[:expectations][route], fn route_expectations ->
-          plugs = Map.fetch!(route_expectations, :retained_plugs)
+      update_in(state.expectations[route], fn route_expectations ->
+        plugs = route_expectations.retained_plugs
 
-          Map.merge(route_expectations, %{
-            retained_plugs: Map.delete(plugs, ref),
-            results: [result | Map.fetch!(route_expectations, :results)]
-          })
-        end)
+        Map.merge(route_expectations, %{
+          retained_plugs: Map.delete(plugs, ref),
+          results: [result | Map.fetch!(route_expectations, :results)]
+        })
+      end)
+    else
+      Map.put(state, :unknown_route_error, result)
     end
   end
 
   defp increase_route_count(state, route) do
     update_in(
-      state[:expectations][route],
+      state.expectations[route],
       fn route_expectations -> Map.update(route_expectations, :request_count, 1, &(&1 + 1)) end
     )
   end
@@ -349,6 +336,31 @@ defmodule Bypass.Instance do
       :undefined -> :ok
       _ -> :erlang.port_close(socket)
     end
+  end
+
+  defp retain_plug_process({method, path} = route, {caller_pid, _}, state) do
+    debug_log([
+      inspect(self()),
+      " retain_plug_process ",
+      inspect(caller_pid),
+      ", retained_plugs: ",
+      inspect(
+        Map.get(state.expectations, route)
+        |> Map.get(:retained_plugs)
+        |> Map.values()
+      )
+    ])
+
+    ref = Process.monitor(caller_pid)
+
+    state =
+      update_in(state.expectations[route][:retained_plugs], fn plugs ->
+        Map.update(plugs, ref, caller_pid, fn _ ->
+          raise "plug already installed for #{method} #{path}"
+        end)
+      end)
+
+    {ref, put_in(state.monitors[ref], route)}
   end
 
   defp dispatch_awaiting_callers(
