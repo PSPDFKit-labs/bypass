@@ -2,28 +2,16 @@
 
 [![Build Status](https://travis-ci.org/PSPDFKit-labs/bypass.svg?branch=master)](https://travis-ci.org/PSPDFKit-labs/bypass)
 
-Bypass provides a quick way to create a custom plug that can be put in place instead of an actual
+[Online Documentation](https://hexdocs.pm/bypass).
+
+<!-- MDOC !-->
+
+`Bypass` provides a quick way to create a custom plug that can be put in place instead of an actual
 HTTP server to return prebaked responses to client requests. This is most useful in tests, when you
 want to create a mock HTTP server and test how your HTTP client handles different types of
 responses from the server.
 
-## Installation
-
-Add bypass to your list of dependencies in mix.exs:
-
-```elixir
-def deps do
-  [
-    {:bypass, "~> 1.0", only: :test}
-  ]
-end
-```
-
-We do not recommended adding `:bypass` to the list of applications in your `mix.exs`. See below
-for usage info.
-
 Bypass supports Elixir 1.6 and OTP 20 and up. It works with Cowboy 1 and 2.
-
 
 ## Usage
 
@@ -41,75 +29,6 @@ You can take any of the following approaches:
 * `stub/4` to install specific routes without expectations
 * a combination of the above, where the routes will be used first, and then the generic version
   will be used as default
-
-#### expect/2 (bypass_instance, function)
-
-Must be called at least once.
-
-```elixir
-Bypass.expect(bypass, fn conn ->
-  assert "/1.1/statuses/update.json" == conn.request_path
-  assert "POST" == conn.method
-  Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
-end)
-```
-
-#### expect_once/2 (bypass_instance, function)
-
-Must be called exactly once.
-
-```elixir
-Bypass.expect_once(bypass, fn conn ->
-  assert "/1.1/statuses/update.json" == conn.request_path
-  assert "POST" == conn.method
-  Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
-end)
-```
-
-#### expect/4 (bypass_instance, method, path, function)
-
-Must be called at least once.
-
-`method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
-
-`path` is the endpoint.
-
-```elixir
-Bypass.expect(bypass, "POST", "/1.1/statuses/update.json", fn conn ->
-  Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
-  Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
-end)
-```
-
-#### expect_once/4 (bypass_instance, method, path, function)
-
-Must be called exactly once.
-
-`method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
-
-`path` is the endpoint.
-
-```elixir
-Bypass.expect_once(bypass, "POST", "/1.1/statuses/update.json", fn conn ->
-  Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
-  Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
-end)
-```
-
-#### stub/4 (bypass_instance, method, path, function)
-
-May be called none or more times.
-
-`method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
-
-`path` is the endpoint.
-
-```elixir
-Bypass.stub(bypass, "POST", "/1.1/statuses/update.json", fn conn ->
-  Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
-  Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
-end)
-```
 
 ### Example
 
@@ -223,6 +142,22 @@ Set `:enable_debug_log` to `true` in the application environment to make Bypass 
 ```elixir
 config :bypass, enable_debug_log: true
 ```
+
+<!-- MDOC !-->
+
+## Installation
+
+Add bypass to your list of dependencies in mix.exs:
+
+```elixir
+def deps do
+  [
+    {:bypass, "~> 1.0", only: :test}
+  ]
+end
+```
+
+We do not recommended adding `:bypass` to the list of applications in your `mix.exs`.
 
 ## License
 
