@@ -124,6 +124,7 @@ defmodule Bypass do
   end)
   ```
   """
+  @spec expect(Bypass.t(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
   def expect(%Bypass{pid: pid}, fun),
     do: Bypass.Instance.call(pid, {:expect, fun})
 
@@ -141,8 +142,9 @@ defmodule Bypass do
   end)
   ```
   """
-  def expect(%Bypass{pid: pid}, methods, paths, fun),
-    do: Bypass.Instance.call(pid, {:expect, methods, paths, fun})
+  @spec expect(Bypass.t(), String.t(), String.t(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
+  def expect(%Bypass{pid: pid}, method, path, fun),
+    do: Bypass.Instance.call(pid, {:expect, method, path, fun})
 
   @doc """
   Expects the passed function to be called exactly once regardless of the route.
@@ -155,6 +157,7 @@ defmodule Bypass do
   end)
   ```
   """
+  @spec expect(Bypass.t(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
   def expect_once(%Bypass{pid: pid}, fun),
     do: Bypass.Instance.call(pid, {:expect_once, fun})
 
@@ -172,8 +175,9 @@ defmodule Bypass do
   end)
   ```
   """
-  def expect_once(%Bypass{pid: pid}, methods, paths, fun),
-    do: Bypass.Instance.call(pid, {:expect_once, methods, paths, fun})
+  @spec expect_once(Bypass.t(), String.t(), String.t(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
+  def expect_once(%Bypass{pid: pid}, method, path, fun),
+    do: Bypass.Instance.call(pid, {:expect_once, method, path, fun})
 
   @doc """
   Allows the function to be invoked zero or many times for the specified route (method and path).
@@ -189,8 +193,9 @@ defmodule Bypass do
   end)
   ```
   """
-  def stub(%Bypass{pid: pid}, methods, paths, fun),
-    do: Bypass.Instance.call(pid, {:stub, methods, paths, fun})
+  @spec stub(Bypass.t(), String.t(), String.t(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
+  def stub(%Bypass{pid: pid}, method, path, fun),
+    do: Bypass.Instance.call(pid, {:stub, method, path, fun})
 
   def pass(%Bypass{pid: pid}),
     do: Bypass.Instance.call(pid, :pass)
