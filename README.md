@@ -87,13 +87,6 @@ the test finishes running.
 Multiple concurrent Bypass instances are supported, all will have a different unique port.  Concurrent
 requests are also supported on the same instance.
 
-In case you need to assign a specific port to a Bypass instance to listen on, you can pass the
-`port` option to `Bypass.open()`:
-
-```elixir
-bypass = Bypass.open(port: 1234)
-```
-
 > Note: `Bypass.open/0` **must not** be called in a `setup_all` blocks due to the way Bypass verifies the expectations at the end of each
 > test.
 

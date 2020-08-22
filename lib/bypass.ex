@@ -21,7 +21,25 @@ defmodule Bypass do
 
   Use the other functions in this module to declare which requests are handled
   and set expectations on the calls.
+
+  ## Options
+
+  - `port` - Optional TCP port to listen to requests
+
+  ## Examples
+
+  ```elixir
+  bypass = Bypass.open()
+  ```
+
+  Assign a specific port to a Bypass instance to listen on:
+
+  ```elixir
+  bypass = Bypass.open(port: 1234)
+  ```
+
   """
+  @spec open(Keyword.t()) :: Bypass.t() | DynamicSupervisor.on_start_child()
   def open(opts \\ []) do
     case DynamicSupervisor.start_child(Bypass.Supervisor, Bypass.Instance.child_spec(opts)) do
       {:ok, pid} ->
@@ -51,6 +69,7 @@ defmodule Bypass do
 
   Returns `:ok` on success and raises an error on failure.
   """
+  @spec verify_expectations!(Bypass.t()) :: :ok | no_return()
   def verify_expectations!(bypass) do
     verify_expectations!(test_framework(), bypass)
   end
@@ -101,6 +120,10 @@ defmodule Bypass do
   @doc """
   Re-opens the TCP socket on the same port. Blocks until the operation is
   complete.
+
+  ```elixir
+  Bypass.up(bypass)
+  ```
   """
   @spec up(Bypass.t()) :: :ok | {:error, :already_up}
   def up(%Bypass{pid: pid}),
@@ -108,6 +131,10 @@ defmodule Bypass do
 
   @doc """
   Closes the TCP socket. Blocks until the operation is complete.
+
+  ```elixir
+  Bypass.down(bypass)
+  ```
   """
   @spec down(Bypass.t()) :: :ok | {:error, :already_down}
   def down(%Bypass{pid: pid}),
@@ -157,7 +184,7 @@ defmodule Bypass do
   end)
   ```
   """
-  @spec expect(Bypass.t(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
+  @spec expect_once(Bypass.t(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
   def expect_once(%Bypass{pid: pid}, fun),
     do: Bypass.Instance.call(pid, {:expect_once, fun})
 
