@@ -197,6 +197,17 @@ defmodule Bypass do
   def stub(%Bypass{pid: pid}, method, path, fun),
     do: Bypass.Instance.call(pid, {:stub, method, path, fun})
 
+  @doc """
+  Makes a expection to pass.
+
+  ```
+  Bypass.expect(bypass, fn _conn ->
+    Bypass.pass(bypass)
+
+    assert false
+  end)
+  """
+  @spec pass(Bypass.t()) :: :ok
   def pass(%Bypass{pid: pid}),
     do: Bypass.Instance.call(pid, :pass)
 
