@@ -24,7 +24,7 @@ defmodule Bypass do
 
   ## Options
 
-  - `port` - Optional TCP port to listen to requests
+  - `port` - Optional TCP port to listen to requests.
 
   ## Examples
 
