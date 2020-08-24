@@ -8,7 +8,7 @@ defmodule Bypass.Mixfile do
     [
       app: :bypass,
       version: @version,
-      elixir: "~> 1.6",
+      elixir: "~> 1.7",
       description: description(),
       package: package(),
       deps: deps(),

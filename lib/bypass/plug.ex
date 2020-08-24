@@ -18,7 +18,7 @@ defmodule Bypass.Plug do
             conn
         catch
           class, reason ->
-            stacktrace = System.stacktrace()
+            stacktrace = __STACKTRACE__
             put_result(pid, route, ref, {:exit, {class, reason, stacktrace}})
             :erlang.raise(class, reason, stacktrace)
         end
