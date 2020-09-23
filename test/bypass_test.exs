@@ -2,18 +2,7 @@ defmodule BypassTest do
   use ExUnit.Case
   doctest Bypass
 
-  if Code.ensure_loaded?(ExUnit.CaptureLog) do
-    defdelegate capture_log(fun), to: ExUnit.CaptureLog
-  else
-    # Shim capture_log for Elixir 1.0
-    defp capture_log(fun) do
-      ExUnit.CaptureIO.capture_io(:user, fn ->
-        fun.()
-        Logger.flush()
-      end)
-      |> String.strip()
-    end
-  end
+  defdelegate capture_log(fun), to: ExUnit.CaptureLog
 
   test "show ISSUE #51" do
     Enum.each(
@@ -37,7 +26,6 @@ defmodule BypassTest do
   defp specify_port(port, expect_fun) do
     {:ok, bypass} = Bypass.open(port: port)
 
-    # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
       bypass,
       fn conn ->
@@ -62,7 +50,6 @@ defmodule BypassTest do
   defp down_socket(expect_fun) do
     {:ok, bypass} = Bypass.open()
 
-    # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
       bypass,
       fn conn -> Plug.Conn.send_resp(conn, 200, "") end
@@ -71,7 +58,7 @@ defmodule BypassTest do
     assert {:ok, 200, ""} = request(bypass.port)
 
     Bypass.down(bypass)
-    assert {:error, :noconnect} = request(bypass.port)
+    assert {:error, %Mint.TransportError{reason: :econnrefused}} = request(bypass.port)
   end
 
   test "Bypass.up opens the socket again" do
@@ -84,7 +71,7 @@ defmodule BypassTest do
     assert {:ok, 200, ""} = request(bypass.port)
 
     Bypass.down(bypass)
-    assert {:error, :noconnect} = request(bypass.port)
+    assert {:error, %Mint.TransportError{reason: :econnrefused}} = request(bypass.port)
 
     Bypass.up(bypass)
     assert {:ok, 200, ""} = request(bypass.port)
@@ -101,13 +88,12 @@ defmodule BypassTest do
   defp not_called(expect_fun) do
     {:ok, bypass} = Bypass.open()
 
-    # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
       bypass,
       fn _conn -> assert false end
     ])
 
-    # Override Bypass' on_exit handler
+    # Override Bypass' on_exit handler.
     ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
       exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
       assert {:error, :not_called, {:any, :any}} = exit_result
@@ -125,7 +111,6 @@ defmodule BypassTest do
   defp pass(expect_fun) do
     {:ok, bypass} = Bypass.open()
 
-    # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
       bypass,
       fn _conn ->
@@ -136,7 +121,8 @@ defmodule BypassTest do
     ])
 
     capture_log(fn ->
-      assert {:error, {:closed, 'The connection was lost.'}} = request(bypass.port)
+      assert {:error, _conn, %Mint.TransportError{reason: :closed}, _responses} =
+               request(bypass.port)
     end)
   end
 
@@ -151,17 +137,17 @@ defmodule BypassTest do
   defp closing_in_flight(expect_fun) do
     {:ok, bypass} = Bypass.open()
 
-    # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
       bypass,
       fn _conn ->
-        # mark the request as arrived, since we're shutting it down now
+        # Mark the request as arrived, since we're shutting it down now.
         Bypass.pass(bypass)
         Bypass.down(bypass)
       end
     ])
 
-    assert {:error, {:closed, 'The connection was lost.'}} == request(bypass.port)
+    assert {:error, _conn, %Mint.TransportError{reason: :closed}, _responses} =
+             request(bypass.port)
   end
 
   test "Bypass.down waits for plug process to terminate before shutting it down with expect" do
@@ -177,7 +163,6 @@ defmodule BypassTest do
     ref = make_ref()
     {:ok, bypass} = Bypass.open()
 
-    # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
       bypass,
       fn conn ->
@@ -190,8 +175,8 @@ defmodule BypassTest do
 
     assert {:ok, 200, ""} = request(bypass.port)
 
-    # Here we make sure that Bypass.down waits until the plug process finishes its work
-    # before shutting down
+    # Here we make sure that Bypass.down waits until the plug process finishes
+    # its work before shutting down.
     refute_received ^ref
     Bypass.down(bypass)
     assert_received ^ref
@@ -234,8 +219,8 @@ defmodule BypassTest do
         end)
       end)
 
-    # Here we make sure that Bypass.down waits until the plug process finishes its work
-    # before shutting down
+    # Here we make sure that Bypass.down waits until the plug process finishes
+    # its work before shutting down.
     refute_received ^ref
     :timer.sleep(200)
     Bypass.down(bypass)
@@ -254,7 +239,7 @@ defmodule BypassTest do
       assert {:ok, 500, ""} = request(bypass.port)
     end)
 
-    # Override Bypass' on_exit handler
+    # Override Bypass' on_exit handler.
     ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
       exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
       assert {:error, :unexpected_request, {:any, :any}} = exit_result
@@ -280,7 +265,7 @@ defmodule BypassTest do
       assert_receive :request_received
     end)
 
-    # Override Bypass' on_exit handler
+    # Override Bypass' on_exit handler.
     ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
       :ok == Bypass.Instance.call(bypass.pid, :on_exit)
     end)
@@ -301,7 +286,7 @@ defmodule BypassTest do
     assert_receive :request_received
     refute_receive :request_received
 
-    # Override Bypass' on_exit handler
+    # Override Bypass' on_exit handler.
     ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
       exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
       assert {:error, :too_many_requests, {:any, :any}} = exit_result
@@ -345,7 +330,6 @@ defmodule BypassTest do
     method = "POST"
     path = "/this"
 
-    # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
       bypass,
       method,
@@ -359,6 +343,48 @@ defmodule BypassTest do
 
     capture_log(fn ->
       assert {:ok, 200, ""} = request(bypass.port, path)
+    end)
+  end
+
+  test "Bypass.stub/4 does not raise if request with parameters is made" do
+    :stub |> specific_route_with_params
+  end
+
+  test "Bypass.expect/4 can be used to define a specific route with parameters" do
+    :expect |> specific_route_with_params
+  end
+
+  test "Bypass.expect_once/4 can be used to define a specific route with parameters" do
+    :expect_once |> specific_route_with_params
+  end
+
+  defp specific_route_with_params(expect_fun) do
+    bypass = Bypass.open()
+    method = "POST"
+    pattern = "/this/:resource/get/:id"
+    path = "/this/my_resource/get/1234"
+
+    apply(Bypass, expect_fun, [
+      bypass,
+      method,
+      pattern,
+      fn conn ->
+        assert conn.method == method
+        assert conn.request_path == path
+
+        assert conn.params == %{
+                 "resource" => "my_resource",
+                 "id" => "1234",
+                 "q_param_1" => "a",
+                 "q_param_2" => "b"
+               }
+
+        Plug.Conn.send_resp(conn, 200, "")
+      end
+    ])
+
+    capture_log(fn ->
+      assert {:ok, 200, ""} = request(bypass.port, path <> "?q_param_1=a&q_param_2=b")
     end)
   end
 
@@ -376,7 +402,6 @@ defmodule BypassTest do
     paths = ["/this", "/that"]
 
     Enum.each(paths, fn path ->
-      # one of Bypass.expect or Bypass.expect_once
       apply(Bypass, expect_fun, [
         bypass,
         method,
@@ -403,56 +428,53 @@ defmodule BypassTest do
   @doc ~S"""
   Open a new HTTP connection and perform the request. We don't want to use httpc, hackney or another
   "high-level" HTTP client, since they do connection pooling and we will sometimes get a connection
-  closed error and not a failed to connect error, when we test Bypass.down
+  closed error and not a failed to connect error, when we test Bypass.down.
   """
-  def request(port, path \\ "/example_path", method \\ :post) do
-    {:ok, conn} = :gun.start_link(self(), '127.0.0.1', port, %{retry: 0})
-
-    try do
-      case :gun.await_up(conn, 250) do
-        {:ok, _protocol} ->
-          stream =
-            case method do
-              :post -> :gun.post(conn, path, [], "")
-              :get -> :gun.get(conn, path, [])
-            end
-
-          case :gun.await(conn, stream, 250) do
-            {:response, :fin, status, _headers} ->
-              {:ok, status, ""}
-
-            {:response, :nofin, status, _headers} ->
-              case :gun.await_body(conn, stream, 250) do
-                {:ok, data} -> {:ok, status, data}
-                {:error, _} = error -> error
-              end
-
-            {:error, _} = error ->
-              error
-          end
-
-        {:error, :timeout} ->
-          raise "Expected gun to die, but it didn't."
-
-        {:error, :normal} ->
-          # `await_up` monitors gun and errors only if gun died (or after `timeout`). That happens
-          # when gun can't connect and is out of retries (immediately in our case) so we know that
-          # gun is dead.
-          {:error, :noconnect}
-      end
-    after
-      Process.unlink(conn)
-      monitor = Process.monitor(conn)
-      Process.exit(conn, :kill)
-      assert_receive {:DOWN, ^monitor, :process, ^conn, _}
+  def request(port, path \\ "/example_path", method \\ "POST") do
+    with {:ok, conn} <- Mint.HTTP.connect(:http, "127.0.0.1", port),
+         {:ok, conn, ref} <- Mint.HTTP.request(conn, method, path, [], "") do
+      receive_responses(conn, ref, 100, [])
     end
   end
 
-  test "Bypass.expect/4 can be used to define a specific route and then redefined" do
+  defp receive_responses(conn, ref, status, body) do
+    receive do
+      message ->
+        with {:ok, conn, responses} <- Mint.HTTP.stream(conn, message) do
+          receive_responses(responses, conn, ref, status, body)
+        end
+    end
+  end
+
+  defp receive_responses([], conn, ref, status, body) do
+    receive_responses(conn, ref, status, body)
+  end
+
+  defp receive_responses([response | responses], conn, ref, status, body) do
+    case response do
+      {:status, ^ref, status} ->
+        receive_responses(responses, conn, ref, status, body)
+
+      {:headers, ^ref, _headers} ->
+        receive_responses(responses, conn, ref, status, body)
+
+      {:data, ^ref, data} ->
+        receive_responses(responses, conn, ref, status, [data | body])
+
+      {:done, ^ref} ->
+        _ = Mint.HTTP.close(conn)
+        {:ok, status, body |> Enum.reverse() |> IO.iodata_to_binary()}
+
+      {:error, ^ref, _reason} = error ->
+        error
+    end
+  end
+
+  test "Bypass.expect/4 can be used to define a specific route and then redefine it later" do
     :expect |> specific_route_redefined
   end
 
-  test "Bypass.expect_once/4 can be used to define a specific route and then redefined" do
+  test "Bypass.expect_once/4 can be used to define a specific route and then redefine it later" do
     :expect_once |> specific_route_redefined
   end
 
@@ -461,7 +483,6 @@ defmodule BypassTest do
     method = "POST"
     path = "/this"
 
-    # one of Bypass.expect or Bypass.expect_once
     apply(Bypass, expect_fun, [
       bypass,
       method,
@@ -477,7 +498,7 @@ defmodule BypassTest do
       assert {:ok, 200, ""} = request(bypass.port, path)
     end)
 
-    # redefining the expect
+    # Redefine the expect
     apply(Bypass, expect_fun, [
       bypass,
       method,
@@ -535,7 +556,7 @@ defmodule BypassTest do
     # Success
     bypass = prepare_stubs()
     assert {:ok, 200, ""} = request(bypass.port)
-    assert {:ok, 200, ""} = request(bypass.port, "/foo", :get)
+    assert {:ok, 200, ""} = request(bypass.port, "/foo", "GET")
     assert :ok = Bypass.verify_expectations!(bypass)
 
     # Fail: no requests on a single stub
@@ -554,7 +575,7 @@ defmodule BypassTest do
       assert {:ok, 200, ""} = request(bypass.port)
     end)
 
-    assert {:ok, 200, ""} = request(bypass.port, "/foo", :get)
+    assert {:ok, 200, ""} = request(bypass.port, "/foo", "GET")
     :timer.sleep(10)
 
     assert_raise ESpec.AssertionError, "Expected only one HTTP request for Bypass", fn ->

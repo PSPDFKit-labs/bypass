@@ -1,9 +1,14 @@
 defmodule Bypass.Plug do
+  @moduledoc false
+
   def init([pid]), do: pid
 
   def call(%{method: method, request_path: request_path} = conn, pid) do
-    route = Bypass.Instance.call(pid, {:get_route, method, request_path})
+    {method, path, path_params} = Bypass.Instance.call(pid, {:get_route, method, request_path})
+    route = {method, path}
     ref = make_ref()
+
+    conn = Plug.Conn.fetch_query_params(%{conn | params: path_params})
 
     case Bypass.Instance.call(pid, {:get_expect_fun, route}) do
       fun when is_function(fun, 1) ->

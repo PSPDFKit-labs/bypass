@@ -1,8 +1,11 @@
 defmodule Bypass.Instance do
+  @moduledoc false
+
   use GenServer, restart: :transient
 
   alias Bypass.Cert
   import Bypass.Utils
+  import Plug.Router.Utils, only: [build_path_match: 1]
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, [opts])
@@ -166,6 +169,7 @@ defmodule Bypass.Instance do
         route,
         new_route(
           fun,
+          path,
           case expect do
             :expect -> :once_or_more
             :expect_once -> :once
@@ -289,7 +293,7 @@ defmodule Bypass.Instance do
     problem_route =
       expectations
       |> Enum.reject(fn {_route, expectations} -> expectations[:expected] == :none_or_more end)
-      |> Enum.find(fn {_route, expectations} -> length(expectations.results) == 0 end)
+      |> Enum.find(fn {_route, expectations} -> Enum.empty?(expectations.results) end)
 
     case problem_route do
       {route, _} ->
@@ -312,17 +316,46 @@ defmodule Bypass.Instance do
   end
 
   defp route_info(method, path, %{expectations: expectations} = _state) do
-    route =
-      case Map.get(expectations, {method, path}, :no_expectations) do
-        :no_expectations ->
-          {:any, :any}
+    segments = build_path_match(path) |> elem(1)
 
-        _ ->
-          {method, path}
-      end
+    route =
+      expectations
+      |> Enum.reduce_while(
+        {:any, :any, %{}},
+        fn
+          {{^method, path_pattern}, %{path_parts: path_parts}}, acc ->
+            case match_route(segments, path_parts) do
+              {true, params} -> {:halt, {method, path_pattern, params}}
+              {false, _} -> {:cont, acc}
+            end
+
+          _, acc ->
+            {:cont, acc}
+        end
+      )
 
     {route, Map.get(expectations, route)}
   end
+
+  defp match_route(path, route) when length(path) == length(route) do
+    path
+    |> Enum.zip(route)
+    |> Enum.reduce_while(
+      {true, %{}},
+      fn
+        {value, {param, _, _}}, {_, params} ->
+          {:cont, {true, Map.put(params, Atom.to_string(param), value)}}
+
+        {segment, segment}, acc ->
+          {:cont, acc}
+
+        _, _ ->
+          {:halt, {false, nil}}
+      end
+    )
+  end
+
+  defp match_route(_, _), do: {false, nil}
 
   defp do_up(ranch_mod, ranch_opts, port, ref) do
     plug_opts = [self()]
@@ -383,15 +416,22 @@ defmodule Bypass.Instance do
     |> length
   end
 
-  defp new_route(fun, expected) do
+  defp new_route(fun, path_parts, expected) when is_list(path_parts) do
     %{
       fun: fun,
       expected: expected,
+      path_parts: path_parts,
       retained_plugs: %{},
       results: [],
       request_count: 0
     }
   end
+
+  defp new_route(fun, :any, expected),
+    do: new_route(fun, [], expected)
+
+  defp new_route(fun, path, expected),
+    do: new_route(fun, build_path_match(path) |> elem(1), expected)
 
   defp cowboy_opts(port, ref, socket) do
     case Application.spec(:plug_cowboy, :vsn) do
@@ -426,7 +466,7 @@ defmodule Bypass.Instance do
   defp so_reuseport() do
     case :os.type() do
       {:unix, :linux} -> [{:raw, 1, 15, <<1::32-native>>}]
-      {:unix, :darwin} -> [{:raw, 65535, 512, <<1::32-native>>}]
+      {:unix, :darwin} -> [{:raw, 65_535, 512, <<1::32-native>>}]
       _ -> []
     end
   end

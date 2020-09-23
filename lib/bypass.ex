@@ -1,24 +1,45 @@
 defmodule Bypass do
-  @moduledoc """
-  Bypass provides a quick way to create a custom Plug that can be put
-  in place instead of an actual HTTP server to return prebaked responses
-  to client requests.
-
-  This module is the main interface to the library.
-  """
+  @external_resource "README.md"
+  @moduledoc "README.md"
+             |> File.read!()
+             |> String.split("<!-- MDOC !-->")
+             |> Enum.fetch!(1)
 
   defstruct pid: nil, port: nil
+
+  @typedoc """
+  Represents a Bypass server process.
+  """
+  @type t :: %__MODULE__{pid: pid, port: non_neg_integer}
 
   import Bypass.Utils
   require Logger
 
   @doc """
-  Starts an Elixir process running a minimal Plug app. The process
-  is a HTTP handler and listens to requests on a TCP port on localhost.
+  Starts an Elixir process running a minimal Plug app. The process is a HTTP
+  handler and listens to requests on a TCP port on localhost.
 
-  Use the other functions in this module to declare which requests are
-  handled and set expectations on the calls.
+  Use the other functions in this module to declare which requests are handled
+  and set expectations on the calls.
+
+  ## Options
+
+  - `port` - Optional TCP port to listen to requests.
+
+  ## Examples
+
+  ```elixir
+  bypass = Bypass.open()
+  ```
+
+  Assign a specific port to a Bypass instance to listen on:
+
+  ```elixir
+  bypass = Bypass.open(port: 1234)
+  ```
+
   """
+  @spec open(Keyword.t()) :: Bypass.t() | DynamicSupervisor.on_start_child()
   def open(opts \\ []) do
     with {:ok, pid} <-
            DynamicSupervisor.start_child(Bypass.Supervisor, Bypass.Instance.child_spec(opts)) do
@@ -30,8 +51,6 @@ defmodule Bypass do
     end
   end
 
-  # Raise an error if called with an unknown framework
-  #
   defp setup_framework_integration(:ex_unit, bypass = %{pid: pid}) do
     ExUnit.Callbacks.on_exit({Bypass, pid}, fn ->
       do_verify_expectations(bypass.pid, ExUnit.AssertionError)
@@ -39,15 +58,15 @@ defmodule Bypass do
   end
 
   defp setup_framework_integration(:espec, _bypass) do
-    # Entry point for more advanced ESpec configurations
   end
 
   @doc """
-  Can be called to immediately verify if the declared request
-  expectations have been met.
+  Can be called to immediately verify if the declared request expectations have
+  been met.
 
   Returns `:ok` on success and raises an error on failure.
   """
+  @spec verify_expectations!(Bypass.t()) :: :ok | no_return()
   def verify_expectations!(bypass) do
     verify_expectations!(test_framework(), bypass)
   end
@@ -95,27 +114,124 @@ defmodule Bypass do
     end
   end
 
+  @doc """
+  Re-opens the TCP socket on the same port. Blocks until the operation is
+  complete.
+
+  ```elixir
+  Bypass.up(bypass)
+  ```
+  """
+  @spec up(Bypass.t()) :: :ok | {:error, :already_up}
   def up(%Bypass{pid: pid}),
     do: Bypass.Instance.call(pid, :up)
 
+  @doc """
+  Closes the TCP socket. Blocks until the operation is complete.
+
+  ```elixir
+  Bypass.down(bypass)
+  ```
+  """
+  @spec down(Bypass.t()) :: :ok | {:error, :already_down}
   def down(%Bypass{pid: pid}),
     do: Bypass.Instance.call(pid, :down)
 
+  @doc """
+  Expects the passed function to be called at least once regardless of the route.
+
+  ```elixir
+  Bypass.expect(bypass, fn conn ->
+    assert "/1.1/statuses/update.json" == conn.request_path
+    assert "POST" == conn.method
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+  end)
+  ```
+  """
+  @spec expect(Bypass.t(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
   def expect(%Bypass{pid: pid}, fun),
     do: Bypass.Instance.call(pid, {:expect, fun})
 
-  def expect(%Bypass{pid: pid}, methods, paths, fun),
-    do: Bypass.Instance.call(pid, {:expect, methods, paths, fun})
+  @doc """
+  Expects the passed function to be called at least once for the specified route (method and path).
 
+  - `method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
+
+  - `path` is the endpoint.
+
+  ```elixir
+  Bypass.expect(bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+    Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+  end)
+  ```
+  """
+  @spec expect(Bypass.t(), String.t(), String.t(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
+  def expect(%Bypass{pid: pid}, method, path, fun),
+    do: Bypass.Instance.call(pid, {:expect, method, path, fun})
+
+  @doc """
+  Expects the passed function to be called exactly once regardless of the route.
+
+  ```elixir
+  Bypass.expect_once(bypass, fn conn ->
+    assert "/1.1/statuses/update.json" == conn.request_path
+    assert "POST" == conn.method
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+  end)
+  ```
+  """
+  @spec expect_once(Bypass.t(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
   def expect_once(%Bypass{pid: pid}, fun),
     do: Bypass.Instance.call(pid, {:expect_once, fun})
 
-  def expect_once(%Bypass{pid: pid}, methods, paths, fun),
-    do: Bypass.Instance.call(pid, {:expect_once, methods, paths, fun})
+  @doc """
+  Expects the passed function to be called exactly once for the specified route (method and path).
 
-  def stub(%Bypass{pid: pid}, methods, paths, fun),
-    do: Bypass.Instance.call(pid, {:stub, methods, paths, fun})
+  - `method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
 
+  - `path` is the endpoint.
+
+  ```elixir
+  Bypass.expect_once(bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+    Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+  end)
+  ```
+  """
+  @spec expect_once(Bypass.t(), String.t(), String.t(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
+  def expect_once(%Bypass{pid: pid}, method, path, fun),
+    do: Bypass.Instance.call(pid, {:expect_once, method, path, fun})
+
+  @doc """
+  Allows the function to be invoked zero or many times for the specified route (method and path).
+
+  - `method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
+
+  - `path` is the endpoint.
+
+  ```elixir
+  Bypass.stub(bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+    Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+  end)
+  ```
+  """
+  @spec stub(Bypass.t(), String.t(), String.t(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
+  def stub(%Bypass{pid: pid}, method, path, fun),
+    do: Bypass.Instance.call(pid, {:stub, method, path, fun})
+
+  @doc """
+  Makes a expection to pass.
+
+  ```
+  Bypass.expect(bypass, fn _conn ->
+    Bypass.pass(bypass)
+
+    assert false
+  end)
+  """
+  @spec pass(Bypass.t()) :: :ok
   def pass(%Bypass{pid: pid}),
     do: Bypass.Instance.call(pid, :pass)
 
