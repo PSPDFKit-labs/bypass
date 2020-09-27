@@ -4,11 +4,11 @@ elixir:
   - 1.9
   - 1.8
   - 1.7
-  - 1.6
 otp_release:
   - 20.0
   - 21.0
   - 22.0
+  - 23.0
 sudo: false # to use faster container based build environment
 env:
   - MIX_ENV=test
@@ -21,7 +21,5 @@ script:
 # https://hexdocs.pm/elixir/compatibility-and-deprecations.html#compatibility-between-elixir-and-erlang-otp
 matrix:
   exclude:
-    - otp_release: 22.0
-      elixir: 1.6
     - otp_release: 20.0
       elixir: 1.10
