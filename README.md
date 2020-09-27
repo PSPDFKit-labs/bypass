@@ -45,7 +45,7 @@ defmodule TwitterClientTest do
   use ExUnit.Case, async: true
 
   setup do
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
     {:ok, bypass: bypass}
   end
 

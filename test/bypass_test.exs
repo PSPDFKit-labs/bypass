@@ -359,7 +359,7 @@ defmodule BypassTest do
   end
 
   defp specific_route_with_params(expect_fun) do
-    bypass = Bypass.open()
+    {:ok, bypass} = Bypass.open()
     method = "POST"
     pattern = "/this/:resource/get/:id"
     path = "/this/my_resource/get/1234"
