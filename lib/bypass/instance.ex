@@ -365,12 +365,13 @@ defmodule Bypass.Instance do
 
     cowboy_opts = cowboy_opts(port, ref, socket)
 
-    if ranch_mod == :ranch_ssl do
-      cowboy_opts = Keyword.merge(cowboy_opts, ranch_opts)
-      {:ok, _pid} = Plug.Cowboy.https(Bypass.Plug, plug_opts, cowboy_opts)
-    else
-      {:ok, _pid} = Plug.Cowboy.http(Bypass.Plug, plug_opts, cowboy_opts)
-    end
+    {:ok, _pid} =
+      if ranch_mod == :ranch_ssl do
+        cowboy_opts = Keyword.merge(cowboy_opts, ranch_opts)
+        Plug.Cowboy.https(Bypass.Plug, plug_opts, cowboy_opts)
+      else
+        Plug.Cowboy.http(Bypass.Plug, plug_opts, cowboy_opts)
+      end
 
     socket
   end
