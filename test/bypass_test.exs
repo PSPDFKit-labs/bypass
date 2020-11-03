@@ -581,4 +581,10 @@ defmodule BypassTest do
 
     Mix.Config.persist(bypass: [test_framework: :ex_unit])
   end
+
+  test "Bypass.open/1 raises when cannot start child" do
+    assert_raise RuntimeError, ~r/Failed to start bypass instance/, fn ->
+      Bypass.open(:error)
+    end
+  end
 end

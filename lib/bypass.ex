@@ -39,20 +39,37 @@ defmodule Bypass do
   ```
 
   """
-  @spec open(Keyword.t()) :: Bypass.t() | DynamicSupervisor.on_start_child()
+  @spec open(Keyword.t()) :: Bypass.t()
   def open(opts \\ []) do
+    pid = start_instance(opts)
+    port = Bypass.Instance.call(pid, :port)
+    debug_log("Did open connection #{inspect(pid)} on port #{inspect(port)}")
+    bypass = %Bypass{pid: pid, port: port}
+    setup_framework_integration(test_framework(), bypass)
+    bypass
+  end
+
+  defp start_instance(opts) do
     case DynamicSupervisor.start_child(Bypass.Supervisor, Bypass.Instance.child_spec(opts)) do
       {:ok, pid} ->
-        port = Bypass.Instance.call(pid, :port)
-        debug_log("Did open connection #{inspect(pid)} on port #{inspect(port)}")
-        bypass = %Bypass{pid: pid, port: port}
-        setup_framework_integration(test_framework(), bypass)
-        bypass
+        pid
 
-      other ->
-        other
+      {:ok, pid, _info} ->
+        pid
+
+      {:error, reason} ->
+        raise "Failed to start bypass instance.\n" <>
+                "Reason: #{start_supervised_error(reason)}"
     end
   end
+
+  defp start_supervised_error({{:EXIT, reason}, info}) when is_tuple(info),
+    do: Exception.format_exit(reason)
+
+  defp start_supervised_error({reason, info}) when is_tuple(info),
+    do: Exception.format_exit(reason)
+
+  defp start_supervised_error(reason), do: Exception.format_exit({:start_spec, reason})
 
   defp setup_framework_integration(:ex_unit, bypass = %{pid: pid}) do
     ExUnit.Callbacks.on_exit({Bypass, pid}, fn ->
