@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.1.0 - TBA
+
+* Support latest Cowboy.
+* Require at least Elixir 1.7.
+
 ## v2.0.0 - 19 Aug 2020
 
 * Allow the redefinition of routes.
