@@ -8,7 +8,7 @@ defmodule Bypass.Mixfile do
     [
       app: :bypass,
       version: @version,
-      elixir: "~> 1.6",
+      elixir: "~> 1.7",
       description: description(),
       package: package(),
       deps: deps(),
@@ -18,7 +18,7 @@ defmodule Bypass.Mixfile do
 
   def application do
     [
-      applications: [:logger, :ranch, :cowboy, :plug, :plug_cowboy],
+      extra_applications: [:logger],
       mod: {Bypass.Application, []},
       env: env()
     ]
@@ -28,8 +28,7 @@ defmodule Bypass.Mixfile do
     [
       {:plug_cowboy, "~> 1.0 or ~> 2.0"},
       {:plug, "~> 1.7"},
-      {:cowlib, "~> 1.0.1"},
-      {:ranch, "~> 1.3.2"},
+      {:ranch, "~> 1.3"},
       {:ex_doc, "> 0.0.0", only: :dev},
       {:espec, "~> 1.6", only: [:dev, :test]},
       {:mint, "~> 1.1", only: :test}
