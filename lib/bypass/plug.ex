@@ -18,7 +18,14 @@ defmodule Bypass.Plug do
             conn
         catch
           class, reason ->
-            stacktrace = __STACKTRACE__
+            stacktrace = unquote do
+              if Version.match?(System.version(), ">= 1.7.0") do
+                quote do: __STACKTRACE__
+              else
+                quote do: System.stacktrace()
+              end
+            end
+            
             put_result(pid, route, ref, {:exit, {class, reason, stacktrace}})
             :erlang.raise(class, reason, stacktrace)
         end

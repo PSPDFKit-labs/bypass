@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.0.0 - TBA
+## v2.0.0 - 19 Aug 2020
 
 * Allow the redefinition of routes.
 * Make listen interface configurable.
