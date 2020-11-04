@@ -242,7 +242,7 @@ defmodule Bypass do
     do: Bypass.Instance.call(pid, {:stub, method, path, fun})
 
   @doc """
-  Makes a expection to pass.
+  Makes an expectation to pass.
 
   ```
   Bypass.expect(bypass, fn _conn ->

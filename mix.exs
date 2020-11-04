@@ -42,8 +42,10 @@ defmodule Bypass.Mixfile do
   defp docs do
     [
       main: "Bypass",
+      api_reference: false,
       source_url: @source_url,
-      source_ref: "v#{@version}"
+      source_ref: "v#{@version}",
+      extras: ["CHANGELOG.md"]
     ]
   end
 
@@ -58,10 +60,11 @@ defmodule Bypass.Mixfile do
 
   defp package do
     [
-      files: ["lib", "mix.exs", "README.md", "LICENSE"],
+      files: ["lib", "mix.exs", "README.md", "CHANGELOG.md", "LICENSE"],
       maintainers: ["PSPDFKit"],
       licenses: ["MIT"],
       links: %{
+        "Changelog" => "#{@source_url}/blob/master/CHANGELOG.md",
         "GitHub" => @source_url,
         "PSPDFKit" => "https://pspdfkit.com"
       }
