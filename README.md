@@ -1,10 +1,14 @@
 # Bypass
 
-[![Build Status](https://travis-ci.org/PSPDFKit-labs/bypass.svg?branch=master)](https://travis-ci.org/PSPDFKit-labs/bypass)
-
-[Online Documentation](https://hexdocs.pm/bypass).
-
 <!-- MDOC !-->
+
+[![Build Status](https://travis-ci.org/PSPDFKit-labs/bypass.svg?branch=master)](https://travis-ci.org/PSPDFKit-labs/bypass)
+[![Module Version](https://img.shields.io/hexpm/v/bypass.svg)](https://hex.pm/packages/bypass)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/bypass/)
+[![Total Download](https://img.shields.io/hexpm/dt/bypass.svg)](https://hex.pm/packages/bypass)
+[![License](https://img.shields.io/hexpm/l/bypass.svg)](https://github.com/PSPDFKit-labs/bypass/blob/master/LICENSE)
+[![Last Updated](https://img.shields.io/github/last-commit/PSPDFKit-labs/bypass.svg)](https://github.com/PSPDFKit-labs/bypass/commits/master)
+
 
 `Bypass` provides a quick way to create a custom plug that can be put in place
 instead of an actual HTTP server to return prebaked responses to client
@@ -105,38 +109,38 @@ test configuration is basically the same, there are only two differences:
    being used with (defaults to `:ex_unit`). This simply disables the automatic
    integration with some hooks provided by `ExUnit`.
 
-```elixir
-config :bypass, test_framework: :espec
-```
+   ```elixir
+   config :bypass, test_framework: :espec
+   ```
 
 2. In your specs, you must explicitly verify the declared expectations. You can
    do it in the `finally` block.
 
-```elixir
-defmodule TwitterClientSpec do
-  use ESpec, async: true
+   ```elixir
+   defmodule TwitterClientSpec do
+     use ESpec, async: true
 
-  before do
-    bypass = Bypass.open()
-    {:shared, bypass: bypass}
-  end
+     before do
+       bypass = Bypass.open()
+       {:shared, bypass: bypass}
+     end
 
-  finally do
-    Bypass.verify_expectations!(shared.bypass)
-  end
+     finally do
+       Bypass.verify_expectations!(shared.bypass)
+     end
 
-  specify "the client can handle an error response" do
-    Bypass.expect_once(shared.bypass, "POST", "/1.1/statuses/update.json", fn conn ->
-      Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
-    end)
+     specify "the client can handle an error response" do
+       Bypass.expect_once(shared.bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+         Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+       end)
 
-    {:ok, client} = TwitterClient.start_link(url: endpoint_url(shared.bypass.port))
-    assert {:error, :rate_limited} == TwitterClient.post_tweet(client, "Elixir is awesome!")
-  end
+       {:ok, client} = TwitterClient.start_link(url: endpoint_url(shared.bypass.port))
+       assert {:error, :rate_limited} == TwitterClient.post_tweet(client, "Elixir is awesome!")
+     end
 
-  defp endpoint_url(port), do: "http://localhost:#{port}/"
-end
-```
+     defp endpoint_url(port), do: "http://localhost:#{port}/"
+   end
+   ```
 
 ## Configuration options
 
@@ -151,7 +155,7 @@ config :bypass, enable_debug_log: true
 
 ## Installation
 
-Add bypass to your list of dependencies in mix.exs:
+Add `:bypass` to your list of dependencies in mix.exs:
 
 ```elixir
 def deps do
