@@ -26,7 +26,7 @@ defmodule Bypass.Mixfile do
 
   defp deps do
     [
-      {:plug_cowboy, "~> 1.0 or ~> 2.0"},
+      {:plug_cowboy, "~> 2.0"},
       {:plug, "~> 1.7"},
       {:ranch, "~> 1.3"},
       {:ex_doc, "> 0.0.0", only: :dev},
