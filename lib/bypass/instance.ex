@@ -409,17 +409,16 @@ defmodule Bypass.Instance do
     }
   end
 
-  defp new_route(fun, :any, expected),
-    do: new_route(fun, [], expected)
+  defp new_route(fun, :any, expected) do
+    new_route(fun, [], expected)
+  end
 
-  defp new_route(fun, path, expected),
-    do: new_route(fun, build_path_match(path) |> elem(1), expected)
+  defp new_route(fun, path, expected) do
+    new_route(fun, build_path_match(path) |> elem(1), expected)
+  end
 
   defp cowboy_opts(port, ref, socket) do
-    case Application.spec(:plug_cowboy, :vsn) do
-      '1.' ++ _ -> [ref: ref, acceptors: 5, port: port, socket: socket]
-      _ -> [ref: ref, port: port, transport_options: [num_acceptors: 5, socket: socket]]
-    end
+    [ref: ref, port: port, transport_options: [num_acceptors: 5, socket: socket]]
   end
 
   # Use raw socket options to set SO_REUSEPORT so we fix {:error, :eaddrinuse} - where the OS errors
