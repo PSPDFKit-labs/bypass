@@ -16,7 +16,7 @@ requests. This is most useful in tests, when you want to create a mock HTTP
 server and test how your HTTP client handles different types of responses from
 the server.
 
-Bypass supports Elixir 1.7 and OTP 20 and up. It works with Cowboy 1 and 2.
+Bypass supports Elixir 1.7 and OTP 20 and up. It works with Cowboy 2.
 
 ## Usage
 
