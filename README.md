@@ -160,7 +160,7 @@ Add `:bypass` to your list of dependencies in mix.exs:
 ```elixir
 def deps do
   [
-    {:bypass, "~> 2.0", only: :test}
+    {:bypass, "~> 2.1", only: :test}
   ]
 end
 ```
