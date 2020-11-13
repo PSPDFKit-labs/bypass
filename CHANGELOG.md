@@ -1,9 +1,10 @@
 # Changelog
 
-## v2.1.0 - TBA
+## v2.1.0 - 13 Nov 2020
 
 * Support latest Cowboy.
 * Require at least Elixir 1.7.
+* Ditch Cowboy 1.0
 
 ## v2.0.0 - 19 Aug 2020
 
