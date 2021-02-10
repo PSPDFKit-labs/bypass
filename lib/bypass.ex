@@ -5,12 +5,12 @@ defmodule Bypass do
              |> String.split("<!-- MDOC !-->")
              |> Enum.fetch!(1)
 
-  defstruct pid: nil, port: nil
+  defstruct pid: nil, port: nil, endpoint_url: nil
 
   @typedoc """
   Represents a Bypass server process.
   """
-  @type t :: %__MODULE__{pid: pid, port: non_neg_integer}
+  @type t :: %__MODULE__{pid: pid, port: non_neg_integer, endpoint_url: String.t()}
 
   import Bypass.Utils
   require Logger
@@ -44,7 +44,7 @@ defmodule Bypass do
     pid = start_instance(opts)
     port = Bypass.Instance.call(pid, :port)
     debug_log("Did open connection #{inspect(pid)} on port #{inspect(port)}")
-    bypass = %Bypass{pid: pid, port: port}
+    bypass = %Bypass{pid: pid, port: port, endpoint_url: "http://localhost:#{port}/"}
     setup_framework_integration(test_framework(), bypass)
     bypass
   end
