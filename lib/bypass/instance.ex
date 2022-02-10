@@ -24,14 +24,19 @@ defmodule Bypass.Instance do
   # GenServer callbacks
 
   def init([opts]) do
-    # Get a free port from the OS
-    case :ranch_tcp.listen(so_reuseport() ++ [ip: listen_ip(), port: Keyword.get(opts, :port, 0)]) do
-      {:ok, socket} ->
-        {:ok, port} = :inet.port(socket)
-        :erlang.port_close(socket)
+    result =
+      case Keyword.get(opts, :port) do
+        nil ->
+          Bypass.FreePort.reserve(self())
 
+        port ->
+          {:ok, port}
+      end
+
+    case result do
+      {:ok, port_or_socket} ->
         ref = make_ref()
-        socket = do_up(port, ref)
+        {:ok, port, socket} = do_up(port_or_socket, ref)
 
         state = %{
           expectations: %{},
@@ -77,7 +82,7 @@ defmodule Bypass.Instance do
   end
 
   defp do_handle_call(:up, _from, %{port: port, ref: ref, socket: nil} = state) do
-    socket = do_up(port, ref)
+    {:ok, _port, socket} = do_up(port, ref)
     {:reply, :ok, %{state | socket: socket}}
   end
 
@@ -317,12 +322,17 @@ defmodule Bypass.Instance do
 
   defp match_route(_, _), do: {false, nil}
 
-  defp do_up(port, ref) do
-    plug_opts = [self()]
+  defp do_up(port, ref) when is_integer(port) do
     {:ok, socket} = :ranch_tcp.listen(so_reuseport() ++ [ip: listen_ip(), port: port])
+    do_up(socket, ref)
+  end
+
+  defp do_up(socket, ref) do
+    plug_opts = [self()]
+    {:ok, port} = :inet.port(socket)
     cowboy_opts = cowboy_opts(port, ref, socket)
     {:ok, _pid} = Plug.Cowboy.http(Bypass.Plug, plug_opts, cowboy_opts)
-    socket
+    {:ok, port, socket}
   end
 
   defp do_down(ref, socket) do
@@ -419,47 +429,5 @@ defmodule Bypass.Instance do
 
   defp cowboy_opts(port, ref, socket) do
     [ref: ref, port: port, transport_options: [num_acceptors: 5, socket: socket]]
-  end
-
-  # Use raw socket options to set SO_REUSEPORT so we fix {:error, :eaddrinuse} - where the OS errors
-  # when we attempt to listen on the same port as before, since it's still considered in use.
-  #
-  # See https://lwn.net/Articles/542629/ for details on SO_REUSEPORT.
-  #
-  # See https://github.com/aetrion/erl-dns/blob/0c8d768/src/erldns_server_sup.erl#L81 for an
-  # Erlang library using this approach.
-  #
-  # We want to do this:
-  #
-  #     int optval = 1;
-  #     setsockopt(sfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
-  #
-  # Use the following C program to find the values on each OS:
-  #
-  #     #include <stdio.h>
-  #     #include <sys/socket.h>
-  #
-  #     int main() {
-  #         printf("SOL_SOCKET: %d\n", SOL_SOCKET);
-  #         printf("SO_REUSEPORT: %d\n", SO_REUSEPORT);
-  #         return 0;
-  #     }
-  defp so_reuseport() do
-    case :os.type() do
-      {:unix, :linux} -> [{:raw, 1, 15, <<1::32-native>>}]
-      {:unix, :darwin} -> [{:raw, 65_535, 512, <<1::32-native>>}]
-      _ -> []
-    end
-  end
-
-  # This is used to override the default behaviour of ranch_tcp
-  # and limit the range of interfaces it will listen on to just
-  # the configured interface. Loopback is a default interface.
-  defp listen_ip do
-    Application.get_env(:bypass, :listen_ip, "127.0.0.1")
-    |> String.split(".")
-    |> Enum.map(&Integer.parse/1)
-    |> Enum.map(&elem(&1, 0))
-    |> List.to_tuple()
   end
 end
