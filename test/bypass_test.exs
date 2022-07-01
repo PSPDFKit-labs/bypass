@@ -301,6 +301,22 @@ defmodule BypassTest do
     :stub |> set_expectation("/stub_path")
   end
 
+  test "Bypass.stub/4 allows stubbing all paths and http methods" do
+    bypass = Bypass.open()
+    parent = self()
+
+    Bypass.stub(bypass, fn conn ->
+      send(parent, {:request_received, conn.method, conn.request_path})
+      Plug.Conn.send_resp(conn, 200, "")
+    end)
+
+    request(bypass.port, "/stub_path", "POST")
+    request(bypass.port, "/stub_path", "DELETE")
+
+    assert_receive {:request_received, "POST", "/stub_path"}
+    assert_receive {:request_received, "DELETE", "/stub_path"}
+  end
+
   test "Bypass.expect/4 can be used to define a specific route" do
     :expect |> specific_route
   end
