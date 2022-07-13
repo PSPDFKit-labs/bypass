@@ -301,7 +301,7 @@ defmodule BypassTest do
     :stub |> set_expectation("/stub_path")
   end
 
-  test "Bypass.stub/4 allows stubbing all paths and http methods" do
+  test "Bypass.stub/2 allows stubbing all paths and http methods" do
     bypass = Bypass.open()
     parent = self()
 
