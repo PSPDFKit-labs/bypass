@@ -115,6 +115,13 @@ defmodule Bypass do
       {:error, :too_many_requests, {method, path}} ->
         raise error_module, "Expected only one HTTP request for Bypass at #{method} #{path}"
 
+      {:error, {:unexpected_request_number, expected, actual}, {:any, :any}} ->
+        raise error_module, "Expected #{expected} HTTP request for Bypass, got #{actual}"
+
+      {:error, {:unexpected_request_number, expected, actual}, {method, path}} ->
+        raise error_module,
+              "Expected #{expected} HTTP request for Bypass at #{method} #{path}, got #{actual}"
+
       {:error, :unexpected_request, {:any, :any}} ->
         raise error_module, "Bypass got an HTTP request but wasn't expecting one"
 
@@ -172,6 +179,9 @@ defmodule Bypass do
   def expect(%Bypass{pid: pid}, fun),
     do: Bypass.Instance.call(pid, {:expect, fun})
 
+  def expect(%Bypass{pid: pid}, n, fun),
+    do: Bypass.Instance.call(pid, {:expect, n, fun})
+
   @doc """
   Expects the passed function to be called at least once for the specified route (method and path).
 
@@ -189,6 +199,9 @@ defmodule Bypass do
   @spec expect(Bypass.t(), String.t(), String.t(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
   def expect(%Bypass{pid: pid}, method, path, fun),
     do: Bypass.Instance.call(pid, {:expect, method, path, fun})
+
+  def expect(%Bypass{pid: pid}, method, path, n, fun),
+    do: Bypass.Instance.call(pid, {{:exactly, n}, method, path, fun})
 
   @doc """
   Expects the passed function to be called exactly once regardless of the route.

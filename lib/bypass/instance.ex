@@ -108,25 +108,30 @@ defmodule Bypass.Instance do
     do_handle_call({expect, :any, :any, fun}, from, state)
   end
 
+  defp do_handle_call({:expect, n, fun}, from, state) do
+    do_handle_call({{:exactly, n}, :any, :any, fun}, from, state)
+  end
+
   defp do_handle_call(
          {expect, method, path, fun},
          _from,
          %{expectations: expectations} = state
        )
-       when expect in [:stub, :expect, :expect_once] and
-              method in [
-                "GET",
-                "POST",
-                "HEAD",
-                "PUT",
-                "PATCH",
-                "DELETE",
-                "OPTIONS",
-                "CONNECT",
-                :any
-              ] and
-              (is_binary(path) or path == :any) and
-              is_function(fun, 1) do
+       when expect in [:stub, :expect, :expect_once] or
+              (is_tuple(expect) and elem(expect, 0) == :exactly and
+                 method in [
+                   "GET",
+                   "POST",
+                   "HEAD",
+                   "PUT",
+                   "PATCH",
+                   "DELETE",
+                   "OPTIONS",
+                   "CONNECT",
+                   :any
+                 ] and
+                 (is_binary(path) or path == :any) and
+                 is_function(fun, 1)) do
     route = {method, path}
 
     updated_expectations =
@@ -140,6 +145,7 @@ defmodule Bypass.Instance do
             :expect -> :once_or_more
             :expect_once -> :once
             :stub -> :none_or_more
+            {:exactly, n} -> {:exactly, n}
           end
         )
       )
@@ -176,6 +182,10 @@ defmodule Bypass.Instance do
     case Map.get(expectations, route) do
       %{expected: :once, request_count: count} when count > 0 ->
         {:reply, {:error, :too_many_requests, route}, increase_route_count(state, route)}
+
+      %{expected: {:exactly, n}, request_count: count} when count >= n ->
+        {:reply, {:error, {:unexpected_request_number, n, count + 1}, route},
+         increase_route_count(state, route)}
 
       nil ->
         {:reply, {:error, :unexpected_request, route}, state}
@@ -253,9 +263,12 @@ defmodule Bypass.Instance do
     problem_route =
       expectations
       |> Enum.reject(fn {_route, expectations} -> expectations[:expected] == :none_or_more end)
-      |> Enum.find(fn {_route, expectations} -> Enum.empty?(expectations.results) end)
+      |> Enum.find(fn {_route, expectations} -> problem_route?(expectations) end)
 
     case problem_route do
+      {route, %{expected: {:exactly, expected}, request_count: actual}} ->
+        {:error, {:unexpected_request_number, expected, actual}, route}
+
       {route, _} ->
         {:error, :not_called, route}
 
@@ -273,6 +286,14 @@ defmodule Bypass.Instance do
           end
         end)
     end
+  end
+
+  defp problem_route?(%{expected: {:exactly, n}} = expectations) do
+    length(expectations.results) < n
+  end
+
+  defp problem_route?(expectations) do
+    Enum.empty?(expectations.results)
   end
 
   defp route_info(method, path, %{expectations: expectations} = _state) do
