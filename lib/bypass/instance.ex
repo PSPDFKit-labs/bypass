@@ -117,21 +117,21 @@ defmodule Bypass.Instance do
          _from,
          %{expectations: expectations} = state
        )
-       when expect in [:stub, :expect, :expect_once] or
-              (is_tuple(expect) and elem(expect, 0) == :exactly and
-                 method in [
-                   "GET",
-                   "POST",
-                   "HEAD",
-                   "PUT",
-                   "PATCH",
-                   "DELETE",
-                   "OPTIONS",
-                   "CONNECT",
-                   :any
-                 ] and
-                 (is_binary(path) or path == :any) and
-                 is_function(fun, 1)) do
+       when (expect in [:stub, :expect, :expect_once] or
+               (is_tuple(expect) and elem(expect, 0) == :exactly)) and
+              method in [
+                "GET",
+                "POST",
+                "HEAD",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "OPTIONS",
+                "CONNECT",
+                :any
+              ] and
+              (is_binary(path) or path == :any) and
+              is_function(fun, 1) do
     route = {method, path}
 
     updated_expectations =
