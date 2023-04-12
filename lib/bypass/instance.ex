@@ -456,10 +456,21 @@ defmodule Bypass.Instance do
   # and limit the range of interfaces it will listen on to just
   # the configured interface. Loopback is a default interface.
   defp listen_ip do
-    Application.get_env(:bypass, :listen_ip, "127.0.0.1")
-    |> String.split(".")
-    |> Enum.map(&Integer.parse/1)
-    |> Enum.map(&elem(&1, 0))
-    |> List.to_tuple()
+    case Application.get_env(:bypass, :listen_ip, {127, 0, 0, 1}) do
+      listen_ip when is_tuple(listen_ip) ->
+        listen_ip
+
+      listen_ip ->
+        listen_ip
+        |> to_charlist()
+        |> :inet.parse_address()
+        |> case do
+          {:ok, listen_ip} ->
+            listen_ip
+
+          {:error, :einval} ->
+            raise ArgumentError, "invalid listen_ip: #{inspect(listen_ip)}"
+        end
+    end
   end
 end
