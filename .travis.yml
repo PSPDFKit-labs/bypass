@@ -63,3 +63,33 @@ jobs:
 
     - elixir: "1.11"
       otp_relase: "23.0"
+
+    # Elixir 1.12: 22-24
+    - elixir: "1.12"
+      otp_relase: "22.0"
+
+    - elixir: "1.12"
+      otp_relase: "23.0"
+
+    - elixir: "1.12"
+      otp_relase: "24.0"
+
+    # Elixir 1.13: 22-24
+    - elixir: "1.13"
+      otp_relase: "22.0"
+
+    - elixir: "1.13"
+      otp_relase: "23.0"
+
+    - elixir: "1.13"
+      otp_relase: "24.0"
+
+    # Elixir 1.14: 23-25
+    - elixir: "1.14"
+      otp_relase: "23.0"
+
+    - elixir: "1.14"
+      otp_relase: "24.0"
+
+    - elixir: "1.14"
+      otp_relase: "25.0"
