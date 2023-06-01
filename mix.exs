@@ -12,7 +12,10 @@ defmodule Bypass.Mixfile do
       description: description(),
       package: package(),
       deps: deps(),
-      docs: docs()
+      docs: docs(),
+      dialyzer: [
+        plt_add_apps: [:ex_unit]
+      ]
     ]
   end
 
@@ -31,7 +34,8 @@ defmodule Bypass.Mixfile do
       {:ranch, "~> 1.7.1"},
       {:ex_doc, "> 0.0.0", only: :dev},
       {:espec, "~> 1.6", only: [:dev, :test]},
-      {:mint, "~> 1.1", only: :test}
+      {:mint, "~> 1.1", only: :test},
+      {:dialyxir, "~> 1.3", only: [:dev], runtime: false}
     ]
   end
 
