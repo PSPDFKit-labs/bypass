@@ -58,7 +58,7 @@ defmodule TwitterClientTest do
       Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
     end)
 
-    {:ok, client} = TwitterClient.start_link(url: endpoint_url(bypass.port))
+    {:ok, client} = TwitterClient.start_link(url: bypass.endpoint_url)
     assert {:error, :rate_limited} == TwitterClient.post_tweet(client, "Elixir is awesome!")
   end
 
@@ -68,7 +68,7 @@ defmodule TwitterClientTest do
       Plug.Conn.resp(conn, 200, "")
     end)
 
-    {:ok, client} = TwitterClient.start_link(url: endpoint_url(bypass.port))
+    {:ok, client} = TwitterClient.start_link(url: bypass.endpoint_url)
 
     assert :ok == TwitterClient.post_tweet(client, "Elixir is awesome!")
 
@@ -85,8 +85,6 @@ defmodule TwitterClientTest do
 
     assert :ok == TwitterClient.post_tweet(client, "Elixir is awesome!")
   end
-
-  defp endpoint_url(port), do: "http://localhost:#{port}/"
 end
 ```
 
@@ -134,11 +132,9 @@ test configuration is basically the same, there are only two differences:
          Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
        end)
 
-       {:ok, client} = TwitterClient.start_link(url: endpoint_url(shared.bypass.port))
+       {:ok, client} = TwitterClient.start_link(url: shared.bypass.endpoint_url))
        assert {:error, :rate_limited} == TwitterClient.post_tweet(client, "Elixir is awesome!")
      end
-
-     defp endpoint_url(port), do: "http://localhost:#{port}/"
    end
    ```
 
