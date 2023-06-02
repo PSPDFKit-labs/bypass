@@ -74,15 +74,16 @@ jobs:
           - elixir: "1.14"
             otp: "25.3"
 
+          # Not available in operating system yet
           # Elixir 1.15: 24-26
-          - elixir: "1.15"
-            otp: "24.3"
-
-          - elixir: "1.15"
-            otp: "25.3"
-
-          - elixir: "1.15"
-            otp: "26.0"
+          #- elixir: "1.15"
+          #  otp: "24.3"
+          #
+          #- elixir: "1.15"
+          #  otp: "25.3"
+          #
+          #- elixir: "1.15"
+          #  otp: "26.0"
     steps:
     - uses: actions/checkout@v3
     - name: Set up Elixir
