@@ -1,8 +1,12 @@
 defmodule Bypass.Plug do
   @moduledoc false
 
-  def init([pid]), do: pid
+  @behaviour Plug
 
+  @impl true
+  def init(bypass_instance: pid), do: pid
+
+  @impl true
   def call(%{method: method, request_path: request_path} = conn, pid) do
     {method, path, path_params} = Bypass.Instance.call(pid, {:get_route, method, request_path})
     route = {method, path}

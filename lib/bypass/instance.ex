@@ -318,7 +318,7 @@ defmodule Bypass.Instance do
   defp match_route(_, _), do: {false, nil}
 
   defp do_up(port, ref) do
-    plug_opts = [self()]
+    plug_opts = [bypass_instance: self()]
     {:ok, socket} = :ranch_tcp.listen(so_reuseport() ++ [ip: listen_ip(), port: port])
     cowboy_opts = cowboy_opts(port, ref, socket)
     {:ok, _pid} = Plug.Cowboy.http(Bypass.Plug, plug_opts, cowboy_opts)
