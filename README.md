@@ -2,7 +2,7 @@
 
 <!-- MDOC !-->
 
-[![Build Status](https://travis-ci.org/PSPDFKit-labs/bypass.svg?branch=master)](https://travis-ci.org/PSPDFKit-labs/bypass)
+[![Build Status](https://github.com/PSPDFKit-labs/bypass/actions/workflows/elixir.yml/badge.svg?branch=master)](https://github.com/PSPDFKit-labs/bypass/actions)
 [![Module Version](https://img.shields.io/hexpm/v/bypass.svg)](https://hex.pm/packages/bypass)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/bypass/)
 [![Total Download](https://img.shields.io/hexpm/dt/bypass.svg)](https://hex.pm/packages/bypass)
@@ -16,7 +16,7 @@ requests. This is most useful in tests, when you want to create a mock HTTP
 server and test how your HTTP client handles different types of responses from
 the server.
 
-Bypass supports Elixir 1.7 and OTP 20 and up. It works with Cowboy 2.
+Bypass supports Elixir 1.10 and OTP 21 and up. It works with Cowboy 2.
 
 ## Usage
 
