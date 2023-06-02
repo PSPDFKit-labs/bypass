@@ -1,4 +1,4 @@
-name: Elixir CI
+name: CI
 
 on:
   push:
@@ -18,52 +18,71 @@ jobs:
       matrix:
         # https://hexdocs.pm/elixir/compatibility-and-deprecations.html#compatibility-between-elixir-and-erlang-otp
         include:
-        # Elixir 1.10: 21-22
-          - elixir: '1.10'
-            otp: '21.0'
+        # Elixir 1.10.3: 21-23
+          - elixir: '1.10.3'
+            otp: '21.3'
 
-          - elixir: "1.10"
-            otp: "22.0"
+          - elixir: "1.10.3"
+            otp: "22.3"
+
+          - elixir: "1.10.3"
+            otp: "23.3"
 
           # Elixir 1.11: 21-23
-          - elixir: "1.11"
-            otp: "21.0"
+          - elixir: "1.11.4"
+            otp: "21.3"
 
-          - elixir: "1.11"
-            otp: "22.0"
+          - elixir: "1.11.4"
+            otp: "22.3"
 
-          - elixir: "1.11"
-            otp: "23.0"
+          - elixir: "1.11.4"
+            otp: "23.3"
+
+          - elixir: "1.11.4"
+            otp: "24.3"
 
           # Elixir 1.12: 22-24
           - elixir: "1.12"
-            otp: "22.0"
+            otp: "22.3"
 
           - elixir: "1.12"
-            otp: "23.0"
+            otp: "23.3"
 
           - elixir: "1.12"
-            otp: "24.0"
+            otp: "24.3"
 
           # Elixir 1.13: 22-24
-          - elixir: "1.13"
-            otp: "22.0"
+          - elixir: "1.13.4"
+            otp: "22.3"
 
-          - elixir: "1.13"
-            otp: "23.0"
+          - elixir: "1.13.4"
+            otp: "23.3"
 
-          - elixir: "1.13"
-            otp: "24.0"
+          - elixir: "1.13.4"
+            otp: "24.3"
+
+          - elixir: "1.13.4"
+            otp: "25.3"
 
           # Elixir 1.14: 23-25
           - elixir: "1.14"
-            otp: "23.0"
+            otp: "23.3"
 
           - elixir: "1.14"
-            otp: "24.0"
+            otp: "24.3"
 
           - elixir: "1.14"
-            otp: "25.0"
+            otp: "25.3"
+
+          # Elixir 1.15: 24-26
+          - elixir: "1.15"
+            otp: "24.3"
+
+          - elixir: "1.15"
+            otp: "25.3"
+
+          - elixir: "1.15"
+            otp: "26.0"
     steps:
     - uses: actions/checkout@v3
     - name: Set up Elixir
