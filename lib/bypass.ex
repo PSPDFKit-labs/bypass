@@ -172,17 +172,19 @@ defmodule Bypass do
   def expect(%Bypass{pid: pid}, fun),
     do: Bypass.Instance.call(pid, {:expect, fun})
 
-  @doc """
+  @doc ~S"""
   Expects the passed function to be called at least once for the specified route (method and path).
 
   - `method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
 
-  - `path` is the endpoint.
+  - `path` is the endpoint. It can also specify parameters which will then be available in the function body.
 
   ```elixir
-  Bypass.expect(bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+  Bypass.expect(bypass, "POST", "/1.1/:resource/statuses/update.json", fn conn ->
     Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
-    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+
+    resource = conn.params["resource"]
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit for #{resource} exceeded"}]}>)
   end)
   ```
   """
@@ -205,17 +207,19 @@ defmodule Bypass do
   def expect_once(%Bypass{pid: pid}, fun),
     do: Bypass.Instance.call(pid, {:expect_once, fun})
 
-  @doc """
+  @doc ~S"""
   Expects the passed function to be called exactly once for the specified route (method and path).
 
   - `method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
 
-  - `path` is the endpoint.
+  - `path` is the endpoint. It can also specify parameters which will then be available in the function body.
 
   ```elixir
-  Bypass.expect_once(bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+  Bypass.expect_once(bypass, "POST", "/1.1/:resource/statuses/update.json", fn conn ->
     Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
-    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+
+    resource = conn.params["resource"]
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit for #{resource} exceeded"}]}>)
   end)
   ```
   """
@@ -223,17 +227,19 @@ defmodule Bypass do
   def expect_once(%Bypass{pid: pid}, method, path, fun),
     do: Bypass.Instance.call(pid, {:expect_once, method, path, fun})
 
-  @doc """
+  @doc ~S"""
   Allows the function to be invoked zero or many times for the specified route (method and path).
 
   - `method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
 
-  - `path` is the endpoint.
+  - `path` is the endpoint. It can also specify parameters which will then be available in the function body.
 
   ```elixir
-  Bypass.stub(bypass, "POST", "/1.1/statuses/update.json", fn conn ->
+  Bypass.stub(bypass, "POST", "/1.1/:resource/statuses/update.json", fn conn ->
     Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
-    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+
+    resource = conn.params["resource"]
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit for #{resource} exceeded"}]}>)
   end)
   ```
   """
