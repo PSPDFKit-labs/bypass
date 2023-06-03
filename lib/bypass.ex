@@ -224,6 +224,21 @@ defmodule Bypass do
     do: Bypass.Instance.call(pid, {:expect_once, method, path, fun})
 
   @doc """
+  Allows the function to be invoked zero or many times regardless of the route
+  or HTTP method.
+
+  ```elixir
+  Bypass.stub(bypass, fn conn ->
+    Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+  end)
+  ```
+  """
+  @spec stub(Bypass.t(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
+  def stub(%Bypass{pid: pid}, fun),
+    do: Bypass.Instance.call(pid, {:stub, :any, :any, fun})
+
+  @doc """
   Allows the function to be invoked zero or many times for the specified route (method and path).
 
   - `method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
