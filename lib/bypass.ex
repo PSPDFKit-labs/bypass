@@ -203,7 +203,7 @@ defmodule Bypass do
 
   ```elixir
   Bypass.expect(bypass, "POST", "/1.1/statuses/update.json", fn conn ->
-    Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
+    Agent.update(AgentModule, fn step_no -> step_no + 1 end)
     Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
   end)
   ```
@@ -256,7 +256,7 @@ defmodule Bypass do
 
   ```elixir
   Bypass.expect_once(bypass, "POST", "/1.1/statuses/update.json", fn conn ->
-    Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
+    Agent.update(AgentModule, fn step_no -> step_no + 1 end)
     Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
   end)
   ```
@@ -274,7 +274,7 @@ defmodule Bypass do
 
   ```elixir
   Bypass.stub(bypass, "POST", "/1.1/statuses/update.json", fn conn ->
-    Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
+    Agent.update(AgentModule, fn step_no -> step_no + 1 end)
     Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
   end)
   ```
