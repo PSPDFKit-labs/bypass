@@ -179,6 +179,18 @@ defmodule Bypass do
   def expect(%Bypass{pid: pid}, fun),
     do: Bypass.Instance.call(pid, {:expect, fun})
 
+  @doc """
+  Expects the passed function to be called exactly `n` times for any route.
+
+  ```elixir
+  Bypass.expect(bypass, 3, fn conn ->
+    assert "/1.1/statuses/update.json" == conn.request_path
+    assert "POST" == conn.method
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+  end)
+  ```
+  """
+  @spec expect(Bypass.t(), pos_integer(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
   def expect(%Bypass{pid: pid}, n, fun),
     do: Bypass.Instance.call(pid, {:expect, n, fun})
 
@@ -200,6 +212,23 @@ defmodule Bypass do
   def expect(%Bypass{pid: pid}, method, path, fun),
     do: Bypass.Instance.call(pid, {:expect, method, path, fun})
 
+  @doc """
+  Expects the passed function to be called exactly `n` times for the specified route (method and path).
+
+  - `method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
+
+  - `path` is the endpoint.
+
+  - `n` is the number of times the route is expected to be called.
+
+  ```elixir
+  Bypass.expect(bypass, "POST", "/1.1/statuses/update.json", 3, fn conn ->
+    Agent.update(AgentModule, fn step_no -> step_no + 1 end)
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+  end)
+  ```
+  """
+  @spec expect(Bypass.t(), String.t(), String.t(), pos_integer(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
   def expect(%Bypass{pid: pid}, method, path, n, fun),
     do: Bypass.Instance.call(pid, {{:exactly, n}, method, path, fun})
 
