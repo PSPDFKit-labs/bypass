@@ -11,21 +11,20 @@ permissions:
 
 jobs:
   build:
-
-    name: Build and test - Erlang ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    name: Erlang ${{matrix.otp}} / Elixir ${{matrix.elixir}}
     runs-on: ubuntu-20.04
     strategy:
       matrix:
         # https://hexdocs.pm/elixir/compatibility-and-deprecations.html#compatibility-between-elixir-and-erlang-otp
         include:
         # Elixir 1.10.3: 21-23
-          - elixir: '1.10.3'
+          - elixir: "1.10.4"
             otp: '21.3'
 
-          - elixir: "1.10.3"
+          - elixir: "1.10.4"
             otp: "22.3"
 
-          - elixir: "1.10.3"
+          - elixir: "1.10.4"
             otp: "23.3"
 
           # Elixir 1.11: 21-23
@@ -42,13 +41,13 @@ jobs:
             otp: "24.3"
 
           # Elixir 1.12: 22-24
-          - elixir: "1.12"
+          - elixir: "1.12.3"
             otp: "22.3"
 
-          - elixir: "1.12"
+          - elixir: "1.12.3"
             otp: "23.3"
 
-          - elixir: "1.12"
+          - elixir: "1.12.3"
             otp: "24.3"
 
           # Elixir 1.13: 22-24
@@ -65,29 +64,28 @@ jobs:
             otp: "25.3"
 
           # Elixir 1.14: 23-25
-          - elixir: "1.14"
+          - elixir: "1.14.5"
             otp: "23.3"
 
-          - elixir: "1.14"
+          - elixir: "1.14.5"
             otp: "24.3"
 
-          - elixir: "1.14"
+          - elixir: "1.14.5"
             otp: "25.3"
 
-          # Not available in operating system yet
           # Elixir 1.15: 24-26
-          #- elixir: "1.15"
-          #  otp: "24.3"
-          #
-          #- elixir: "1.15"
-          #  otp: "25.3"
-          #
-          #- elixir: "1.15"
-          #  otp: "26.0"
+          - elixir: "1.15.7"
+            otp: "24.3"
+
+          - elixir: "1.15.7"
+            otp: "25.3"
+
+          - elixir: "1.15.7"
+            otp: "26.1"
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Elixir
-      uses: erlef/setup-beam@988e02bfe678367a02564f65ca2e37726dc0268f
+      uses: erlef/setup-beam@v1
       with:
         otp-version: ${{matrix.otp}}
         elixir-version: ${{matrix.elixir}}
@@ -101,4 +99,3 @@ jobs:
       run: mix deps.get
     - name: Run tests
       run: mix test
-
