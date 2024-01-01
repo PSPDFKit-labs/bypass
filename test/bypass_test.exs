@@ -541,7 +541,7 @@ defmodule BypassTest do
   end
 
   test "Bypass.verify_expectations! - with ESpec it will check if the expectations are being met" do
-    Mix.Config.persist(bypass: [test_framework: :espec])
+    Application.put_all_env(bypass: [test_framework: :espec])
 
     # Fail: no requests
     bypass = prepare_stubs()
@@ -579,7 +579,7 @@ defmodule BypassTest do
       Bypass.verify_expectations!(bypass)
     end
 
-    Mix.Config.persist(bypass: [test_framework: :ex_unit])
+    Application.put_all_env(bypass: [test_framework: :ex_unit])
   end
 
   test "Bypass.open/1 raises when cannot start child" do
