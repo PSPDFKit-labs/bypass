@@ -3,7 +3,7 @@ defmodule Bypass.Utils do
 
   Application.load(:bypass)
 
-  if Application.get_env(:bypass, :enable_debug_log, false) do
+  if Application.compile_env(:bypass, :enable_debug_log, false) do
     defmacro debug_log(msg) do
       quote bind_quoted: [msg: msg] do
         require Logger
