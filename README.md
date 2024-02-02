@@ -9,7 +9,6 @@
 [![License](https://img.shields.io/hexpm/l/bypass.svg)](https://github.com/PSPDFKit-labs/bypass/blob/master/LICENSE)
 [![Last Updated](https://img.shields.io/github/last-commit/PSPDFKit-labs/bypass.svg)](https://github.com/PSPDFKit-labs/bypass/commits/master)
 
-
 `Bypass` provides a quick way to create a custom plug that can be put in place
 instead of an actual HTTP server to return prebaked responses to client
 requests. This is most useful in tests, when you want to create a mock HTTP
@@ -31,10 +30,14 @@ the same port again. Both functions block until the socket updates its state.
 
 You can take any of the following approaches:
 
-* `expect/2` or `expect_once/2` to install a generic function that all calls to
+* `expect/2`, `expect/3` or `expect_once/2` to install a generic function that all calls to
   bypass will use
-* `expect/4` and/or `expect_once/4` to install specific routes (method and path)
+* `expect/4`, `expect/5` and/or `expect_once/4` to install specific routes (method and path)
 * `stub/4` to install specific routes without expectations
+* `expect/2` and `expect/4` well set up a called *at least once* expectaton.
+* `expect_once/2` and `expect_once/4` setup a called *exactly once* expecation.
+* `expect/3` and `expect/5` setup a called *exactly n times* expectation.
+
 * a combination of the above, where the routes will be used first, and then the
   generic version will be used as default
 

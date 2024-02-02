@@ -289,7 +289,7 @@ defmodule BypassTest do
     # Override Bypass' on_exit handler.
     ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
       exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
-      assert {:error, :too_many_requests, {:any, :any}} = exit_result
+      assert {:error, :too_many_requests, {:any, :any}, {1, 5}} = exit_result
     end)
   end
 
@@ -307,6 +307,47 @@ defmodule BypassTest do
 
   test "Bypass.expect_once/4 can be used to define a specific route" do
     :expect_once |> specific_route
+  end
+
+  test "Bypass.expect can be used to specify an expected call count" do
+    bypass = Bypass.open()
+
+    Bypass.expect(bypass, "POST", "/this", 2, fn conn ->
+      Plug.Conn.send_resp(conn, 200, "")
+    end)
+
+    assert {:ok, 200, ""} = request(bypass.port, "/this")
+    assert {:ok, 200, ""} = request(bypass.port, "/this")
+    # This one will fail, because it is over the limit
+    assert {:ok, 500, ""} = request(bypass.port, "/this")
+    # Override Bypass' on_exit handler.
+    ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
+      exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
+      assert {:error, :too_many_requests, {"POST", "/this"}, {2, 3}} = exit_result
+    end)
+  end
+
+  test "Bypass.expect can be used to specify not called, passes when not called" do
+    bypass = Bypass.open()
+
+    Bypass.expect(bypass, "POST", "/this", 0, fn _conn ->
+      raise "Should be not called"
+    end)
+  end
+
+  test "Bypass.expect can be used to specify not called, fails when called" do
+    bypass = Bypass.open()
+
+    Bypass.expect(bypass, "POST", "/this", 0, fn conn ->
+      Plug.Conn.send_resp(conn, 200, "This should fail verify because it was called")
+    end)
+
+    _ = request(bypass.port, "/this")
+
+    ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
+      exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
+      assert {:error, :too_many_requests, {"POST", "/this"}, {0, 1}} = exit_result
+    end)
   end
 
   defp set_expectation(action, path) do
@@ -575,7 +616,7 @@ defmodule BypassTest do
     assert {:ok, 200, ""} = request(bypass.port, "/foo", "GET")
     :timer.sleep(10)
 
-    assert_raise ESpec.AssertionError, "Expected only one HTTP request for Bypass", fn ->
+    assert_raise ESpec.AssertionError, "Expected only 1 HTTP request for Bypass, but got 2", fn ->
       Bypass.verify_expectations!(bypass)
     end
 
