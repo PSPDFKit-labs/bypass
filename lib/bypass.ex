@@ -197,7 +197,7 @@ defmodule Bypass do
   end)
   ```
   """
-  @spec expect(Bypass.t(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
+  @spec expect(Bypass.t(), pos_integer(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
   def expect(%Bypass{pid: pid}, count, fun),
     do: Bypass.Instance.call(pid, {count, fun})
 
