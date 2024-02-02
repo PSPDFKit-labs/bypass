@@ -30,6 +30,10 @@ defmodule Bypass.Plug do
       {:error, error, route} ->
         put_result(pid, route, make_ref(), {:error, error, route})
         raise "route error"
+
+      {:error, error, route, counts} ->
+        put_result(pid, route, make_ref(), {:error, error, route, counts})
+        raise "route error"
     end
   end
 

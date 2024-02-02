@@ -104,7 +104,8 @@ defmodule Bypass.Instance do
     end
   end
 
-  defp do_handle_call({expect, fun}, from, state) when expect in [:expect, :expect_once] do
+  defp do_handle_call({expect, fun}, from, state)
+       when expect in [:expect, :expect_once] or is_integer(expect) do
     do_handle_call({expect, :any, :any, fun}, from, state)
   end
 
@@ -113,7 +114,7 @@ defmodule Bypass.Instance do
          _from,
          %{expectations: expectations} = state
        )
-       when expect in [:stub, :expect, :expect_once] and
+       when (expect in [:stub, :expect, :expect_once] or is_integer(expect)) and
               method in [
                 "GET",
                 "POST",
@@ -138,8 +139,9 @@ defmodule Bypass.Instance do
           path,
           case expect do
             :expect -> :once_or_more
-            :expect_once -> :once
+            :expect_once -> 1
             :stub -> :none_or_more
+            call_count when is_integer(call_count) -> call_count
           end
         )
       )
@@ -174,8 +176,10 @@ defmodule Bypass.Instance do
          %{expectations: expectations} = state
        ) do
     case Map.get(expectations, route) do
-      %{expected: :once, request_count: count} when count > 0 ->
-        {:reply, {:error, :too_many_requests, route}, increase_route_count(state, route)}
+      %{expected: expected, request_count: count}
+      when is_integer(expected) and count >= expected ->
+        state = increase_route_count(state, route)
+        {:reply, {:error, :too_many_requests, route, {expected, count + 1}}, state}
 
       nil ->
         {:reply, {:error, :unexpected_request, route}, state}
@@ -253,26 +257,36 @@ defmodule Bypass.Instance do
     problem_route =
       expectations
       |> Enum.reject(fn {_route, expectations} -> expectations[:expected] == :none_or_more end)
+      |> Enum.reject(fn {_route, %{expected: expected, request_count: actual}} ->
+        expected == 0 and actual == 0
+      end)
       |> Enum.find(fn {_route, expectations} -> Enum.empty?(expectations.results) end)
 
     case problem_route do
-      {route, _} ->
+      {_route, %{expected: 0, request_count: actual}} when actual > 0 ->
+        find_error(expectations)
+
+      {route, _arg} ->
         {:error, :not_called, route}
 
       nil ->
-        Enum.reduce_while(expectations, nil, fn {_route, route_expectations}, _ ->
-          first_error =
-            Enum.find(route_expectations.results, fn
-              result when is_tuple(result) -> result
-              _result -> nil
-            end)
-
-          case first_error do
-            nil -> {:cont, nil}
-            error -> {:halt, error}
-          end
-        end)
+        find_error(expectations)
     end
+  end
+
+  defp find_error(expectations) do
+    Enum.reduce_while(expectations, nil, fn {_route, route_expectations}, _ ->
+      first_error =
+        Enum.find(route_expectations.results, fn
+          result when is_tuple(result) -> result
+          _result -> nil
+        end)
+
+      case first_error do
+        nil -> {:cont, nil}
+        error -> {:halt, error}
+      end
+    end)
   end
 
   defp route_info(method, path, %{expectations: expectations} = _state) do
