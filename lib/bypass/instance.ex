@@ -59,12 +59,17 @@ defmodule Bypass.Instance do
 
       {route, state} ->
         result = {:exit, {:exit, reason, []}}
-        {:noreply, route |> put_result(ref, result, state) |> dispatch_awaiting_callers()}
+
+        route
+        |> put_result(ref, result, state)
+        |> dispatch_awaiting_callers()
     end
   end
 
   def handle_cast({:put_expect_result, route, ref, result}, state) do
-    {:noreply, route |> put_result(ref, result, state) |> dispatch_awaiting_callers()}
+    route
+    |> put_result(ref, result, state)
+    |> dispatch_awaiting_callers()
   end
 
   def handle_call(request, from, state) do
@@ -363,32 +368,30 @@ defmodule Bypass.Instance do
     {ref, put_in(state.monitors[ref], route)}
   end
 
-  defp dispatch_awaiting_callers(
-         %{
-           callers_awaiting_down: down_callers,
-           callers_awaiting_exit: exit_callers,
-           socket: socket,
-           ref: ref
-         } = state
-       ) do
+  defp dispatch_awaiting_callers(state) do
     if retained_plugs_count(state) == 0 do
-      down_reset =
-        if length(down_callers) > 0 do
-          do_down(ref, socket)
-          Enum.each(down_callers, &GenServer.reply(&1, :ok))
-          %{state | socket: nil, callers_awaiting_down: []}
-        end
-
-      if length(exit_callers) > 0 do
-        {result, _updated_state} = do_exit(state)
-        Enum.each(exit_callers, &GenServer.reply(&1, result))
-        GenServer.stop(:normal)
-      end
-
-      down_reset || state
-    else
       state
+      |> handle_callers_awaiting_down()
+      |> handle_callers_awaiting_exit()
+    else
+      {:noreply, state}
     end
+  end
+
+  defp handle_callers_awaiting_down(%{callers_awaiting_down: []} = state), do: state
+
+  defp handle_callers_awaiting_down(%{callers_awaiting_down: down_callers} = state) do
+    do_down(state.ref, state.socket)
+    Enum.each(down_callers, &GenServer.reply(&1, :ok))
+    %{state | socket: nil, callers_awaiting_down: []}
+  end
+
+  defp handle_callers_awaiting_exit(%{callers_awaiting_exit: []} = state), do: {:noreply, state}
+
+  defp handle_callers_awaiting_exit(%{callers_awaiting_exit: exit_callers} = state) do
+    {result, updated_state} = do_exit(state)
+    Enum.each(exit_callers, &GenServer.reply(&1, result))
+    {:stop, :normal, result, updated_state}
   end
 
   defp retained_plugs_count(state) do
