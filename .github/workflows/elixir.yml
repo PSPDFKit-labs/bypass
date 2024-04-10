@@ -13,34 +13,11 @@ jobs:
   build:
 
     name: Build and test - Erlang ${{matrix.otp}} / Elixir ${{matrix.elixir}}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         # https://hexdocs.pm/elixir/compatibility-and-deprecations.html#compatibility-between-elixir-and-erlang-otp
         include:
-        # Elixir 1.10.3: 21-23
-          - elixir: '1.10.3'
-            otp: '21.3'
-
-          - elixir: "1.10.3"
-            otp: "22.3"
-
-          - elixir: "1.10.3"
-            otp: "23.3"
-
-          # Elixir 1.11: 21-23
-          - elixir: "1.11.4"
-            otp: "21.3"
-
-          - elixir: "1.11.4"
-            otp: "22.3"
-
-          - elixir: "1.11.4"
-            otp: "23.3"
-
-          - elixir: "1.11.4"
-            otp: "24.3"
-
           # Elixir 1.12: 22-24
           - elixir: "1.12"
             otp: "22.3"
@@ -64,7 +41,7 @@ jobs:
           - elixir: "1.13.4"
             otp: "25.3"
 
-          # Elixir 1.14: 23-25
+          # Elixir 1.14: 23-25 (and 26 from v1.14.5)
           - elixir: "1.14"
             otp: "23.3"
 
@@ -74,16 +51,28 @@ jobs:
           - elixir: "1.14"
             otp: "25.3"
 
-          # Not available in operating system yet
+          - elixir: "1.14"
+            otp: "26.2"
+
           # Elixir 1.15: 24-26
-          #- elixir: "1.15"
-          #  otp: "24.3"
-          #
-          #- elixir: "1.15"
-          #  otp: "25.3"
-          #
-          #- elixir: "1.15"
-          #  otp: "26.0"
+          - elixir: "1.15"
+            otp: "24.3"
+
+          - elixir: "1.15"
+            otp: "25.3"
+
+          - elixir: "1.15"
+            otp: "26.2"
+
+          # Elixir 1.16: 24-26
+          - elixir: "1.15"
+            otp: "24.3"
+
+          - elixir: "1.15"
+            otp: "25.3"
+
+          - elixir: "1.15"
+            otp: "26.2"
     steps:
     - uses: actions/checkout@v3
     - name: Set up Elixir
