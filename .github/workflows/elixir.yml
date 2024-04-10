@@ -9,29 +9,13 @@ on:
 permissions:
   contents: read
 
-steps: &common_steps
-- uses: actions/checkout@v3
-- name: Set up Elixir
-  uses: erlef/setup-beam@ae6e9db1bf49000a27750a9e283cf4069da9d171
-  with:
-    otp-version: ${{matrix.otp}}
-    elixir-version: ${{matrix.elixir}}
-- name: Restore dependencies cache
-  uses: actions/cache@v3
-  with:
-    path: deps
-    key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-    restore-keys: ${{ runner.os }}-mix-
-- name: Install dependencies
-  run: mix deps.get
-- name: Run tests
-  run: mix test
+
 
 
 jobs:
-  build-ubuntu-20:
+  build:
     name: Build and test - Erlang ${{matrix.otp}} / Elixir ${{matrix.elixir}}
-    runs-on: ubuntu-20.04
+    runs-on:  ${{matrix.os}}
     strategy:
       matrix:
         # https://hexdocs.pm/elixir/compatibility-and-deprecations.html#compatibility-between-elixir-and-erlang-otp
@@ -39,66 +23,90 @@ jobs:
           # Elixir 1.12: 22-24
           - elixir: "1.12"
             otp: "22.3"
+            os: "ubuntu-20.04"
 
           - elixir: "1.12"
             otp: "23.3"
+            os: "ubuntu-20.04"
 
           - elixir: "1.12"
             otp: "24.3"
+            os: "ubuntu-22.04"
 
           # Elixir 1.13: 22-24
           - elixir: "1.13.4"
             otp: "22.3"
+            os: "ubuntu-20.04"
 
           - elixir: "1.13.4"
             otp: "23.3"
+            os: "ubuntu-20.04"
 
           - elixir: "1.13.4"
             otp: "24.3"
+            os: "ubuntu-22.04"
 
           - elixir: "1.13.4"
             otp: "25.3"
+            os: "ubuntu-22.04"
 
           # Elixir 1.14: 23-25 (and 26 from v1.14.5)
           - elixir: "1.14"
             otp: "23.3"
+            os: "ubuntu-20.04"
 
           - elixir: "1.14"
             otp: "24.3"
+            os: "ubuntu-22.04"
 
           - elixir: "1.14"
             otp: "25.3"
+            os: "ubuntu-22.04"
+
+          - elixir: "1.14"
+            otp: "26.2"
+            os: "ubuntu-22.04"
 
           # Elixir 1.15: 24-26
           - elixir: "1.15"
             otp: "24.3"
+            os: "ubuntu-22.04"
 
           - elixir: "1.15"
             otp: "25.3"
+            os: "ubuntu-22.04"
+
+          - elixir: "1.15"
+            otp: "26.2"
+            os: "ubuntu-22.04"
 
           # Elixir 1.16: 24-25
           - elixir: "1.16"
             otp: "24.3"
+            os: "ubuntu-22.04"
 
           - elixir: "1.16"
             otp: "25.3"
+            os: "ubuntu-22.04"
 
-    steps: *common_steps
-
-  build:
-    name: Build and test - Erlang ${{matrix.otp}} / Elixir ${{matrix.elixir}}
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        # https://hexdocs.pm/elixir/compatibility-and-deprecations.html#compatibility-between-elixir-and-erlang-otp
-        include:
-          - elixir: "1.14"
+          - elixir: "1.16"
             otp: "26.2"
+            os: "ubuntu-22.04"
 
-          - elixir: "1.15"
-            otp: "26.2"
-
-          - elixir: "1.15"
-            otp: "26.2"
-
-    steps: *common_steps
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Elixir
+      uses: erlef/setup-beam@ae6e9db1bf49000a27750a9e283cf4069da9d171
+      with:
+        otp-version: ${{matrix.otp}}
+        elixir-version: ${{matrix.elixir}}
+    - name: Restore dependencies cache
+      uses: actions/cache@v3
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-
+    - name: Install dependencies
+      run: mix deps.get
+    - name: Run tests
+      run: mix test
