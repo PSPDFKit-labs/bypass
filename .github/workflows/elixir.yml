@@ -9,11 +9,29 @@ on:
 permissions:
   contents: read
 
-jobs:
-  build:
+steps: &common_steps
+- uses: actions/checkout@v3
+- name: Set up Elixir
+  uses: erlef/setup-beam@ae6e9db1bf49000a27750a9e283cf4069da9d171
+  with:
+    otp-version: ${{matrix.otp}}
+    elixir-version: ${{matrix.elixir}}
+- name: Restore dependencies cache
+  uses: actions/cache@v3
+  with:
+    path: deps
+    key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+    restore-keys: ${{ runner.os }}-mix-
+- name: Install dependencies
+  run: mix deps.get
+- name: Run tests
+  run: mix test
 
+
+jobs:
+  build-ubuntu-20:
     name: Build and test - Erlang ${{matrix.otp}} / Elixir ${{matrix.elixir}}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         # https://hexdocs.pm/elixir/compatibility-and-deprecations.html#compatibility-between-elixir-and-erlang-otp
@@ -51,9 +69,6 @@ jobs:
           - elixir: "1.14"
             otp: "25.3"
 
-          - elixir: "1.14"
-            otp: "26.2"
-
           # Elixir 1.15: 24-26
           - elixir: "1.15"
             otp: "24.3"
@@ -61,33 +76,29 @@ jobs:
           - elixir: "1.15"
             otp: "25.3"
 
-          - elixir: "1.15"
-            otp: "26.2"
-
-          # Elixir 1.16: 24-26
-          - elixir: "1.15"
+          # Elixir 1.16: 24-25
+          - elixir: "1.16"
             otp: "24.3"
 
-          - elixir: "1.15"
+          - elixir: "1.16"
             otp: "25.3"
+
+    steps: *common_steps
+
+  build:
+    name: Build and test - Erlang ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        # https://hexdocs.pm/elixir/compatibility-and-deprecations.html#compatibility-between-elixir-and-erlang-otp
+        include:
+          - elixir: "1.14"
+            otp: "26.2"
 
           - elixir: "1.15"
             otp: "26.2"
-    steps:
-    - uses: actions/checkout@v3
-    - name: Set up Elixir
-      uses: erlef/setup-beam@988e02bfe678367a02564f65ca2e37726dc0268f
-      with:
-        otp-version: ${{matrix.otp}}
-        elixir-version: ${{matrix.elixir}}
-    - name: Restore dependencies cache
-      uses: actions/cache@v3
-      with:
-        path: deps
-        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-        restore-keys: ${{ runner.os }}-mix-
-    - name: Install dependencies
-      run: mix deps.get
-    - name: Run tests
-      run: mix test
 
+          - elixir: "1.15"
+            otp: "26.2"
+
+    steps: *common_steps
