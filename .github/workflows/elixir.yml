@@ -9,85 +9,94 @@ on:
 permissions:
   contents: read
 
+
+
+
 jobs:
   build:
-
     name: Build and test - Erlang ${{matrix.otp}} / Elixir ${{matrix.elixir}}
-    runs-on: ubuntu-20.04
+    runs-on:  ${{matrix.os}}
     strategy:
       matrix:
         # https://hexdocs.pm/elixir/compatibility-and-deprecations.html#compatibility-between-elixir-and-erlang-otp
         include:
-        # Elixir 1.10.3: 21-23
-          - elixir: '1.10.3'
-            otp: '21.3'
-
-          - elixir: "1.10.3"
-            otp: "22.3"
-
-          - elixir: "1.10.3"
-            otp: "23.3"
-
-          # Elixir 1.11: 21-23
-          - elixir: "1.11.4"
-            otp: "21.3"
-
-          - elixir: "1.11.4"
-            otp: "22.3"
-
-          - elixir: "1.11.4"
-            otp: "23.3"
-
-          - elixir: "1.11.4"
-            otp: "24.3"
-
           # Elixir 1.12: 22-24
           - elixir: "1.12"
             otp: "22.3"
+            os: "ubuntu-20.04"
 
           - elixir: "1.12"
             otp: "23.3"
+            os: "ubuntu-20.04"
 
           - elixir: "1.12"
             otp: "24.3"
+            os: "ubuntu-22.04"
 
           # Elixir 1.13: 22-24
           - elixir: "1.13.4"
             otp: "22.3"
+            os: "ubuntu-20.04"
 
           - elixir: "1.13.4"
             otp: "23.3"
+            os: "ubuntu-20.04"
 
           - elixir: "1.13.4"
             otp: "24.3"
+            os: "ubuntu-22.04"
 
           - elixir: "1.13.4"
             otp: "25.3"
+            os: "ubuntu-22.04"
 
-          # Elixir 1.14: 23-25
+          # Elixir 1.14: 23-25 (and 26 from v1.14.5)
           - elixir: "1.14"
             otp: "23.3"
+            os: "ubuntu-20.04"
 
           - elixir: "1.14"
             otp: "24.3"
+            os: "ubuntu-22.04"
 
           - elixir: "1.14"
             otp: "25.3"
+            os: "ubuntu-22.04"
 
-          # Not available in operating system yet
+          - elixir: "1.14"
+            otp: "26.2"
+            os: "ubuntu-22.04"
+
           # Elixir 1.15: 24-26
-          #- elixir: "1.15"
-          #  otp: "24.3"
-          #
-          #- elixir: "1.15"
-          #  otp: "25.3"
-          #
-          #- elixir: "1.15"
-          #  otp: "26.0"
+          - elixir: "1.15"
+            otp: "24.3"
+            os: "ubuntu-22.04"
+
+          - elixir: "1.15"
+            otp: "25.3"
+            os: "ubuntu-22.04"
+
+          - elixir: "1.15"
+            otp: "26.2"
+            os: "ubuntu-22.04"
+
+          # Elixir 1.16: 24-25
+          - elixir: "1.16"
+            otp: "24.3"
+            os: "ubuntu-22.04"
+
+          - elixir: "1.16"
+            otp: "25.3"
+            os: "ubuntu-22.04"
+
+          - elixir: "1.16"
+            otp: "26.2"
+            os: "ubuntu-22.04"
+
     steps:
     - uses: actions/checkout@v3
     - name: Set up Elixir
-      uses: erlef/setup-beam@988e02bfe678367a02564f65ca2e37726dc0268f
+      uses: erlef/setup-beam@ae6e9db1bf49000a27750a9e283cf4069da9d171
       with:
         otp-version: ${{matrix.otp}}
         elixir-version: ${{matrix.elixir}}
@@ -101,4 +110,3 @@ jobs:
       run: mix deps.get
     - name: Run tests
       run: mix test
-
