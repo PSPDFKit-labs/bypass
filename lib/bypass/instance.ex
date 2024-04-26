@@ -391,7 +391,7 @@ defmodule Bypass.Instance do
   defp handle_callers_awaiting_exit(%{callers_awaiting_exit: exit_callers} = state) do
     {result, updated_state} = do_exit(state)
     Enum.each(exit_callers, &GenServer.reply(&1, result))
-    {:stop, :normal, result, updated_state}
+    {:stop, :normal, updated_state}
   end
 
   defp retained_plugs_count(state) do
