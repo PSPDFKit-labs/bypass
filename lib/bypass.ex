@@ -109,11 +109,8 @@ defmodule Bypass do
       :ok_call ->
         :ok
 
-      {:error, :too_many_requests, {:any, :any}} ->
-        raise error_module, "Expected only one HTTP request for Bypass"
-
-      {:error, :too_many_requests, {method, path}} ->
-        raise error_module, "Expected only one HTTP request for Bypass at #{method} #{path}"
+      {:error, :too_many_requests, route_tuple, expected_actual_tuple} ->
+        raise error_module, format_too_many_requests_message(route_tuple, expected_actual_tuple)
 
       {:error, :unexpected_request, {:any, :any}} ->
         raise error_module, "Bypass got an HTTP request but wasn't expecting one"
@@ -132,6 +129,23 @@ defmodule Bypass do
       {:exit, {class, reason, stacktrace}} ->
         :erlang.raise(class, reason, stacktrace)
     end
+  end
+
+  defp format_too_many_requests_message(route, {expected, actual}) do
+    expected_language =
+      case expected do
+        0 -> "no HTTP requests"
+        1 -> "only 1 HTTP request"
+        plural -> "#{plural} HTTP requests"
+      end
+
+    route_language =
+      case route do
+        {:any, :any} -> ""
+        {method, path} -> " at #{method} #{path}"
+      end
+
+    "Expected #{expected_language} for Bypass#{route_language}, but got #{actual}"
   end
 
   @doc """
@@ -173,6 +187,21 @@ defmodule Bypass do
     do: Bypass.Instance.call(pid, {:expect, fun})
 
   @doc """
+  Expects the passed function to be called an exact number of times, regardless of the route.
+
+  ```elixir
+  Bypass.expect(bypass, 2, fn conn ->
+    assert "/1.1/statuses/update.json" == conn.request_path
+    assert "POST" == conn.method
+    Plug.Conn.resp(conn, 429, ~s<{"errors": [{"code": 88, "message": "Rate limit exceeded"}]}>)
+  end)
+  ```
+  """
+  @spec expect(Bypass.t(), pos_integer(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
+  def expect(%Bypass{pid: pid}, count, fun),
+    do: Bypass.Instance.call(pid, {count, fun})
+
+  @doc """
   Expects the passed function to be called at least once for the specified route (method and path).
 
   - `method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
@@ -189,6 +218,25 @@ defmodule Bypass do
   @spec expect(Bypass.t(), String.t(), String.t(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
   def expect(%Bypass{pid: pid}, method, path, fun),
     do: Bypass.Instance.call(pid, {:expect, method, path, fun})
+
+  @doc """
+  Expects the passed function to be called an exact number of times for the specified route (method and path).
+
+  - `method` is one of `["GET", "POST", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT"]`
+
+  - `path` is the endpoint.
+
+  ```elixir
+  Bypass.expect(bypass, "POST", "/1.1/statuses/update.json", 2, fn conn ->
+    Agent.get_and_update(AgentModule, fn step_no -> {step_no, step_no + 1} end)
+    Plug.Conn.resp(conn, 200, "")
+  end)
+  ```
+  """
+  @spec expect(Bypass.t(), String.t(), String.t(), integer(), (Plug.Conn.t() -> Plug.Conn.t())) ::
+          :ok
+  def expect(%Bypass{pid: pid}, method, path, count, fun),
+    do: Bypass.Instance.call(pid, {count, method, path, fun})
 
   @doc """
   Expects the passed function to be called exactly once regardless of the route.
