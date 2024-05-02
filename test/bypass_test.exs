@@ -39,6 +39,32 @@ defmodule BypassTest do
     assert(is_map(bypass2) and bypass2.__struct__ == Bypass)
   end
 
+  test "Bypass.open can specify an ip to operate on with expect" do
+    specify_ip({127, 0, 0, 2}, :expect)
+  end
+
+  test "Bypass.open can specify an ip to operate on with expect_once" do
+    specify_ip({127, 1, 2, 3}, :expect_once)
+  end
+
+  defp specify_ip(ip, expect_fun) do
+    port = 9876
+    bypass = Bypass.open(ip: ip, port: port)
+    address = ip |> :inet.ntoa() |> to_string()
+
+    apply(Bypass, expect_fun, [
+      bypass,
+      fn conn ->
+        assert address == conn.host
+        Plug.Conn.send_resp(conn, 200, "")
+      end
+    ])
+
+    assert {:ok, 200, ""} = request(port, "/", "GET", address)
+    bypass2 = Bypass.open(ip: ip, port: port)
+    assert(is_map(bypass2) and bypass2.__struct__ == Bypass)
+  end
+
   test "Bypass.down takes down the socket with expect" do
     :expect |> down_socket
   end
@@ -430,8 +456,8 @@ defmodule BypassTest do
   "high-level" HTTP client, since they do connection pooling and we will sometimes get a connection
   closed error and not a failed to connect error, when we test Bypass.down.
   """
-  def request(port, path \\ "/example_path", method \\ "POST") do
-    with {:ok, conn} <- Mint.HTTP.connect(:http, "127.0.0.1", port, mode: :passive),
+  def request(port, path \\ "/example_path", method \\ "POST", ip \\ "127.0.0.1") do
+    with {:ok, conn} <- Mint.HTTP.connect(:http, ip, port, mode: :passive),
          {:ok, conn, ref} <- Mint.HTTP.request(conn, method, path, [], "") do
       receive_responses(conn, ref, 100, [])
     end
