@@ -59,12 +59,16 @@ defmodule Bypass.Instance do
 
       {route, state} ->
         result = {:exit, {:exit, reason, []}}
-        {:noreply, route |> put_result(ref, result, state) |> dispatch_awaiting_callers()}
+        route
+        |> put_result(ref, result, state)
+        |> dispatch_awaiting_callers()
     end
   end
 
   def handle_cast({:put_expect_result, route, ref, result}, state) do
-    {:noreply, route |> put_result(ref, result, state) |> dispatch_awaiting_callers()}
+    route
+    |> put_result(ref, result, state)
+    |> dispatch_awaiting_callers()
   end
 
   def handle_call(request, from, state) do
@@ -95,7 +99,7 @@ defmodule Bypass.Instance do
          %{socket: socket, ref: ref, callers_awaiting_down: callers_awaiting_down} = state
        )
        when not is_nil(socket) do
-    if retained_plugs_count(state) > 0 do
+    if has_any_retained_plugs?(state) do
       # wait for plugs to finish
       {:noreply, %{state | callers_awaiting_down: [from | callers_awaiting_down]}}
     else
@@ -188,7 +192,7 @@ defmodule Bypass.Instance do
   end
 
   defp do_handle_call(:on_exit, from, %{callers_awaiting_exit: callers} = state) do
-    if retained_plugs_count(state) > 0 do
+    if has_any_retained_plugs?(state) do
       {:noreply, %{state | callers_awaiting_exit: [from | callers]}}
     else
       {result, updated_state} = do_exit(state)
@@ -371,31 +375,38 @@ defmodule Bypass.Instance do
            ref: ref
          } = state
        ) do
-    if retained_plugs_count(state) == 0 do
-      down_reset =
-        if length(down_callers) > 0 do
-          do_down(ref, socket)
-          Enum.each(down_callers, &GenServer.reply(&1, :ok))
-          %{state | socket: nil, callers_awaiting_down: []}
+    if has_any_retained_plugs?(state) do
+      {:noreply, state}
+    else
+      state =
+        case down_callers do
+          [] ->
+            state
+
+          [_ | _] = down_callers ->
+            do_down(ref, socket)
+            Enum.each(down_callers, &GenServer.reply(&1, :ok))
+            %{state | socket: nil, callers_awaiting_down: []}
         end
 
-      if length(exit_callers) > 0 do
-        {result, _updated_state} = do_exit(state)
-        Enum.each(exit_callers, &GenServer.reply(&1, result))
-        GenServer.stop(:normal)
-      end
+      case exit_callers do
+        [] ->
+          {:noreply, state}
 
-      down_reset || state
-    else
-      state
+        [_ | _] = exit_callers ->
+          {result, _updated_state} = do_exit(state)
+          Enum.each(exit_callers, &GenServer.reply(&1, result))
+          {:stop, :normal, state}
+      end
     end
   end
 
-  defp retained_plugs_count(state) do
+  @spec has_any_retained_plugs?(map()) :: boolean()
+  defp has_any_retained_plugs?(state) do
     state.expectations
-    |> Map.values()
-    |> Enum.flat_map(&Map.get(&1, :retained_plugs))
-    |> length
+    |> Enum.any?(fn {_, %{retained_plugs: retained_plugs}} ->
+      not Enum.empty?(retained_plugs)
+    end)
   end
 
   defp new_route(fun, path_parts, expected) when is_list(path_parts) do
