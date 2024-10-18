@@ -293,6 +293,62 @@ defmodule BypassTest do
     end)
   end
 
+  for {expected, actual, alt} <- [{3, 5, "too many"}, {5, 3, "not enough"}] do
+    @tag expected: expected, actual: actual
+    test "Bypass.expect/3 fails when #{alt} requests arrived", %{
+      expected: expected,
+      actual: actual
+    } do
+      bypass = Bypass.open()
+      parent = self()
+
+      Bypass.expect(bypass, expected, fn conn ->
+        send(parent, :request_received)
+        Plug.Conn.send_resp(conn, 200, "")
+      end)
+
+      Enum.map(1..actual, fn _ -> Task.async(fn -> request(bypass.port) end) end)
+      |> Task.await_many()
+
+      Enum.each(1..min(actual, expected), fn _ -> assert_receive :request_received end)
+      refute_receive :request_received
+
+      # Override Bypass' on_exit handler.
+      ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
+        exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
+        assert {:error, {:unexpected_request_number, expected, actual}, _} = exit_result
+        assert expected != actual
+      end)
+    end
+
+    @tag expected: expected, actual: actual
+    test "Bypass.expect/5 fails when #{alt} requests arrived", %{
+      expected: expected,
+      actual: actual
+    } do
+      bypass = Bypass.open()
+      parent = self()
+
+      Bypass.expect(bypass, "GET", "/foo", expected, fn conn ->
+        send(parent, :request_received)
+        Plug.Conn.send_resp(conn, 200, "")
+      end)
+
+      Enum.map(1..actual, fn _ -> Task.async(fn -> request(bypass.port, "/foo", "GET") end) end)
+      |> Task.await_many()
+
+      Enum.each(1..min(actual, expected), fn _ -> assert_receive :request_received end)
+      refute_receive :request_received
+
+      # Override Bypass' on_exit handler.
+      ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn ->
+        exit_result = Bypass.Instance.call(bypass.pid, :on_exit)
+        assert {:error, {:unexpected_request_number, expected, actual}, _} = exit_result
+        assert expected != actual
+      end)
+    end
+  end
+
   test "Bypass.stub/4 does not raise if request is made" do
     :stub |> specific_route
   end
