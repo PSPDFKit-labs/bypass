@@ -150,6 +150,15 @@ log what it's doing:
 ```elixir
 config :bypass, enable_debug_log: true
 ```
+Set `:listen_ip` to override the default behaviour of ranch_tcp and limit the
+range of interfaces it will listen on to just the configured interface. Loopback
+is the default interface (127.0.0.1).
+
+Example to listen on all interfaces
+
+```elixir
+config :bypass, listen_ip: "0.0.0.0"
+```
 
 <!-- MDOC !-->
 
