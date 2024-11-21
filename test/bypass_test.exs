@@ -582,6 +582,101 @@ defmodule BypassTest do
     bypass
   end
 
+  test "Bypass.expect_once/4 pipe expectations" do
+    bypass = Bypass.open()
+
+    bypass
+    |> Bypass.expect_once("POST", "/foo", fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/foo"
+      Plug.Conn.send_resp(conn, 200, "foo response")
+    end)
+    |> Bypass.expect_once("POST", "/bar", fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/bar"
+      Plug.Conn.send_resp(conn, 200, "bar response")
+    end)
+
+    capture_log(fn ->
+      assert {:ok, 200, "foo response"} = request(bypass.port, "/foo")
+      assert {:ok, 200, "bar response"} = request(bypass.port, "/bar")
+    end)
+  end
+
+  test "Bypass.expect/4 pipe expectations" do
+    bypass = Bypass.open()
+
+    bypass
+    |> Bypass.expect("POST", "/foo", fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/foo"
+      Plug.Conn.send_resp(conn, 200, "foo response")
+    end)
+    |> Bypass.expect("POST", "/bar", fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/bar"
+      Plug.Conn.send_resp(conn, 200, "bar response")
+    end)
+
+    capture_log(fn ->
+      assert {:ok, 200, "foo response"} = request(bypass.port, "/foo")
+      assert {:ok, 200, "bar response"} = request(bypass.port, "/bar")
+    end)
+  end
+
+  test "Bypass.stub/4 pipe expectations" do
+    bypass = Bypass.open()
+
+    bypass
+    |> Bypass.stub("POST", "/foo", fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/foo"
+      Plug.Conn.send_resp(conn, 200, "foo response")
+    end)
+    |> Bypass.stub("POST", "/bar", fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/bar"
+      Plug.Conn.send_resp(conn, 200, "bar response")
+    end)
+
+    capture_log(fn ->
+      assert {:ok, 200, "foo response"} = request(bypass.port, "/foo")
+      assert {:ok, 200, "bar response"} = request(bypass.port, "/bar")
+    end)
+  end
+
+  test "Bypass.expect/2 pipe expectations" do
+    bypass = Bypass.open()
+
+    bypass
+    |> Bypass.expect(fn conn ->
+      Plug.Conn.send_resp(conn, 200, "foo response")
+    end)
+    |> Bypass.expect(fn conn ->
+      Plug.Conn.send_resp(conn, 200, "bar response")
+    end)
+
+    capture_log(fn ->
+      assert {:ok, 200, "bar response"} = request(bypass.port, "/bar")
+    end)
+  end
+
+  test "Bypass.expect_once/2 pipe expectations" do
+    bypass = Bypass.open()
+
+    bypass
+    |> Bypass.expect_once(fn conn ->
+      Plug.Conn.send_resp(conn, 200, "foo response")
+    end)
+    |> Bypass.expect_once(fn conn ->
+      Plug.Conn.send_resp(conn, 200, "bar response")
+    end)
+
+    capture_log(fn ->
+      assert {:ok, 200, "bar response"} = request(bypass.port, "/bar")
+    end)
+  end
+
   test "Bypass.verify_expectations! - with ExUnit it will raise an exception" do
     bypass = Bypass.open()
 
