@@ -643,4 +643,9 @@ defmodule BypassTest do
       Bypass.open(:error)
     end
   end
+
+  test "Bypass.open/1 open fills endpoint_url" do
+    bypass = Bypass.open(port: 8000)
+    assert bypass.endpoint_url == "http://localhost:8000/"
+  end
 end
