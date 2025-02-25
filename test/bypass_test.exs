@@ -643,4 +643,15 @@ defmodule BypassTest do
       Bypass.open(:error)
     end
   end
+
+  test "path can contain colon" do
+    bypass = Bypass.open()
+
+    Bypass.expect(bypass, "POST", "/resources/:resource", fn conn ->
+      assert conn.params == %{ "resource" => ":resource" }
+      Plug.Conn.send_resp(conn, 200, "")
+    end)
+
+    assert {:ok, 200, ""} = request(bypass.port, "/resources/:resource")
+  end
 end
