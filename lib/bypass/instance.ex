@@ -25,7 +25,9 @@ defmodule Bypass.Instance do
 
   def init([opts]) do
     # Get a free port from the OS
-    case :ranch_tcp.listen(so_reuseport() ++ [ip: listen_ip(), port: Keyword.get(opts, :port, 0)]) do
+    case :ranch_tcp.listen(%{
+           socket_opts: so_reuseport() ++ [ip: listen_ip(), port: Keyword.get(opts, :port, 0)]
+         }) do
       {:ok, socket} ->
         {:ok, port} = :inet.port(socket)
         :erlang.port_close(socket)
@@ -340,7 +342,10 @@ defmodule Bypass.Instance do
 
   defp do_up(port, ref) do
     plug_opts = [bypass_instance: self()]
-    {:ok, socket} = :ranch_tcp.listen(so_reuseport() ++ [ip: listen_ip(), port: port])
+
+    {:ok, socket} =
+      :ranch_tcp.listen(%{socket_opts: so_reuseport() ++ [ip: listen_ip(), port: port]})
+
     cowboy_opts = cowboy_opts(port, ref, socket)
     {:ok, _pid} = Plug.Cowboy.http(Bypass.Plug, plug_opts, cowboy_opts)
     socket

@@ -41,6 +41,7 @@ defmodule Bypass do
   """
   @spec open(Keyword.t()) :: Bypass.t()
   def open(opts \\ []) do
+    dbg(opts)
     pid = start_instance(opts)
     port = Bypass.Instance.call(pid, :port)
     debug_log("Did open connection #{inspect(pid)} on port #{inspect(port)}")
@@ -228,7 +229,8 @@ defmodule Bypass do
   end)
   ```
   """
-  @spec expect(Bypass.t(), String.t(), String.t(), pos_integer(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
+  @spec expect(Bypass.t(), String.t(), String.t(), pos_integer(), (Plug.Conn.t() -> Plug.Conn.t())) ::
+          :ok
   def expect(%Bypass{pid: pid}, method, path, n, fun),
     do: Bypass.Instance.call(pid, {{:exactly, n}, method, path, fun})
 
