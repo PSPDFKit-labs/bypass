@@ -174,16 +174,16 @@ This software is licensed under [the MIT license](LICENSE).
 
 ## About
 
-<a href="https://pspdfkit.com/">
+<a href="https://nutrient.io/">
   <img src="https://avatars2.githubusercontent.com/u/1527679?v=3&s=200" height="80" />
 </a>
 
-This project is maintained and funded by [PSPDFKit](https://pspdfkit.com/).
+This project is maintained and funded by [Nutrient](https://nutrient.io/).
 
 Please ensure [you signed our
-CLA](https://pspdfkit.com/guides/web/current/miscellaneous/contributing/) so we
+CLA](https://www.nutrient.io/guides/web/miscellaneous/contributing/) so we
 can accept your contributions.
 
 See [our other open source projects](https://github.com/PSPDFKit-labs), read
-[our blog](https://pspdfkit.com/blog/) or say hello on Twitter
-([@PSPDFKit](https://twitter.com/pspdfkit)).
+[our blog](https://nutrient.io/blog/) or say hello on X
+([@nutrientdocs](https://x.com/nutrientdocs)).
