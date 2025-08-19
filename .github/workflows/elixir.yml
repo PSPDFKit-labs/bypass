@@ -2,111 +2,134 @@ name: CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
 
 permissions:
   contents: read
 
-
-
-
 jobs:
   build:
     name: Build and test - Erlang ${{matrix.otp}} / Elixir ${{matrix.elixir}}
-    runs-on:  ${{matrix.os}}
+    runs-on: ${{matrix.os}}
     strategy:
       matrix:
         # https://hexdocs.pm/elixir/compatibility-and-deprecations.html#compatibility-between-elixir-and-erlang-otp
         include:
           # Elixir 1.12: 22-24
           - elixir: "1.12"
-            otp: "22.3"
+            otp: "22"
             os: "ubuntu-20.04"
 
           - elixir: "1.12"
-            otp: "23.3"
+            otp: "23"
             os: "ubuntu-20.04"
 
           - elixir: "1.12"
-            otp: "24.3"
+            otp: "24"
             os: "ubuntu-22.04"
 
           # Elixir 1.13: 22-24
-          - elixir: "1.13.4"
-            otp: "22.3"
+          - elixir: "1.13"
+            otp: "22"
             os: "ubuntu-20.04"
 
-          - elixir: "1.13.4"
-            otp: "23.3"
+          - elixir: "1.13"
+            otp: "23"
             os: "ubuntu-20.04"
 
-          - elixir: "1.13.4"
-            otp: "24.3"
+          - elixir: "1.13"
+            otp: "24"
             os: "ubuntu-22.04"
 
-          - elixir: "1.13.4"
-            otp: "25.3"
+          - elixir: "1.13"
+            otp: "25"
             os: "ubuntu-22.04"
 
           # Elixir 1.14: 23-25 (and 26 from v1.14.5)
           - elixir: "1.14"
-            otp: "23.3"
+            otp: "23"
             os: "ubuntu-20.04"
 
           - elixir: "1.14"
-            otp: "24.3"
+            otp: "24"
             os: "ubuntu-22.04"
 
           - elixir: "1.14"
-            otp: "25.3"
+            otp: "25"
             os: "ubuntu-22.04"
 
           - elixir: "1.14"
-            otp: "26.2"
+            otp: "26"
             os: "ubuntu-22.04"
 
           # Elixir 1.15: 24-26
           - elixir: "1.15"
-            otp: "24.3"
+            otp: "24"
             os: "ubuntu-22.04"
 
           - elixir: "1.15"
-            otp: "25.3"
+            otp: "25"
             os: "ubuntu-22.04"
 
           - elixir: "1.15"
-            otp: "26.2"
+            otp: "26"
             os: "ubuntu-22.04"
 
           # Elixir 1.16: 24-25
           - elixir: "1.16"
-            otp: "24.3"
+            otp: "24"
             os: "ubuntu-22.04"
 
           - elixir: "1.16"
-            otp: "25.3"
+            otp: "25"
             os: "ubuntu-22.04"
 
           - elixir: "1.16"
-            otp: "26.2"
+            otp: "26"
+            os: "ubuntu-22.04"
+
+          # Elixir 1.17: 25-27
+          - elixir: "1.17"
+            otp: "25"
+            os: "ubuntu-22.04"
+
+          - elixir: "1.17"
+            otp: "26"
+            os: "ubuntu-22.04"
+
+          - elixir: "1.17"
+            otp: "27"
+            os: "ubuntu-22.04"
+
+          # Elixir 1.18: 25-27
+          - elixir: "1.18"
+            otp: "25"
+            os: "ubuntu-22.04"
+
+          - elixir: "1.18"
+            otp: "26"
+            os: "ubuntu-22.04"
+
+          - elixir: "1.18"
+            otp: "27"
             os: "ubuntu-22.04"
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Elixir
-      uses: erlef/setup-beam@ae6e9db1bf49000a27750a9e283cf4069da9d171
-      with:
-        otp-version: ${{matrix.otp}}
-        elixir-version: ${{matrix.elixir}}
-    - name: Restore dependencies cache
-      uses: actions/cache@v3
-      with:
-        path: deps
-        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-        restore-keys: ${{ runner.os }}-mix-
-    - name: Install dependencies
-      run: mix deps.get
-    - name: Run tests
-      run: mix test
+      - uses: actions/checkout@v4
+      - name: Set up Elixir
+        uses: erlef/setup-beam@ae6e9db1bf49000a27750a9e283cf4069da9d171
+        with:
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+      - name: Install dependencies
+        run: mix deps.get
+      - name: Run tests
+        run: mix test
