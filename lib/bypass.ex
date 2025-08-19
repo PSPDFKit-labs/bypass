@@ -5,7 +5,7 @@ defmodule Bypass do
              |> String.split("<!-- MDOC !-->")
              |> Enum.fetch!(1)
 
-  defstruct pid: nil, port: nil
+  defstruct pid: nil, port: nil, ip: nil
 
   @typedoc """
   Represents a Bypass server process.
@@ -25,6 +25,7 @@ defmodule Bypass do
   ## Options
 
   - `port` - Optional TCP port to listen to requests.
+  - `ip` - Optional TCP IP to listen to requests. Default is `{127, 0, 0, 1}`
 
   ## Examples
 
@@ -43,8 +44,9 @@ defmodule Bypass do
   def open(opts \\ []) do
     pid = start_instance(opts)
     port = Bypass.Instance.call(pid, :port)
+    ip = Bypass.Instance.call(pid, :ip)
     debug_log("Did open connection #{inspect(pid)} on port #{inspect(port)}")
-    bypass = %Bypass{pid: pid, port: port}
+    bypass = %Bypass{pid: pid, port: port, ip: ip}
     setup_framework_integration(test_framework(), bypass)
     bypass
   end
