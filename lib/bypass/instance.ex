@@ -4,7 +4,7 @@ defmodule Bypass.Instance do
   use GenServer, restart: :transient
 
   import Bypass.Utils
-  import Plug.Router.Utils, only: [build_path_match: 1]
+  import Plug.Router.Utils, only: [build_path_match: 1, split: 1]
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, [opts])
@@ -297,7 +297,7 @@ defmodule Bypass.Instance do
   end
 
   defp route_info(method, path, %{expectations: expectations} = _state) do
-    segments = build_path_match(path) |> elem(1)
+    segments = path |> split
 
     route =
       expectations
