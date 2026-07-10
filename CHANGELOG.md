@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+* Switch the default HTTP server backend from Cowboy to
+  [Bandit](https://hex.pm/packages/bandit).
+* Introduce the `Bypass.Adapter` behaviour, making the backend pluggable via
+  `config :bypass, adapter: <module>`. Ships `Bypass.Adapter.Bandit` (default)
+  and `Bypass.Adapter.Cowboy`.
+* `:plug_cowboy` is now an optional dependency. To keep using Cowboy, add
+  `{:plug_cowboy, "~> 2.0"}` to your deps and set
+  `config :bypass, adapter: Bypass.Adapter.Cowboy`.
+* Require at least Elixir 1.14 and OTP 25 (Bandit / the `reuseport` inet option).
+
 ## v2.1.0 - 13 Nov 2020
 
 * Support latest Cowboy.

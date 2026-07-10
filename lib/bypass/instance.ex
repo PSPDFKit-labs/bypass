@@ -24,20 +24,21 @@ defmodule Bypass.Instance do
   # GenServer callbacks
 
   def init([opts]) do
+    adapter = Application.get_env(:bypass, :adapter, Bypass.Adapter.Bandit)
+
     # Get a free port from the OS
-    case :ranch_tcp.listen(so_reuseport() ++ [ip: listen_ip(), port: Keyword.get(opts, :port, 0)]) do
+    case :gen_tcp.listen(Keyword.get(opts, :port, 0), so_reuseport() ++ [ip: listen_ip()]) do
       {:ok, socket} ->
         {:ok, port} = :inet.port(socket)
         :erlang.port_close(socket)
 
-        ref = make_ref()
-        socket = do_up(port, ref)
+        server = do_up(port, adapter)
 
         state = %{
           expectations: %{},
           port: port,
-          ref: ref,
-          socket: socket,
+          adapter: adapter,
+          server: server,
           callers_awaiting_down: [],
           callers_awaiting_exit: [],
           pass: false,
@@ -76,31 +77,31 @@ defmodule Bypass.Instance do
     {:reply, port, state}
   end
 
-  defp do_handle_call(:up, _from, %{port: port, ref: ref, socket: nil} = state) do
-    socket = do_up(port, ref)
-    {:reply, :ok, %{state | socket: socket}}
+  defp do_handle_call(:up, _from, %{port: port, adapter: adapter, server: nil} = state) do
+    server = do_up(port, adapter)
+    {:reply, :ok, %{state | server: server}}
   end
 
   defp do_handle_call(:up, _from, state) do
     {:reply, {:error, :already_up}, state}
   end
 
-  defp do_handle_call(:down, _from, %{socket: nil} = state) do
+  defp do_handle_call(:down, _from, %{server: nil} = state) do
     {:reply, {:error, :already_down}, state}
   end
 
   defp do_handle_call(
          :down,
          from,
-         %{socket: socket, ref: ref, callers_awaiting_down: callers_awaiting_down} = state
+         %{server: server, adapter: adapter, callers_awaiting_down: callers_awaiting_down} = state
        )
-       when not is_nil(socket) do
+       when not is_nil(server) do
     if retained_plugs_count(state) > 0 do
       # wait for plugs to finish
       {:noreply, %{state | callers_awaiting_down: [from | callers_awaiting_down]}}
     else
-      do_down(ref, socket)
-      {:reply, :ok, %{state | socket: nil}}
+      do_down(server, adapter)
+      {:reply, :ok, %{state | server: nil}}
     end
   end
 
@@ -209,12 +210,12 @@ defmodule Bypass.Instance do
   defp do_exit(state) do
     updated_state =
       case state do
-        %{socket: nil} ->
+        %{server: nil} ->
           state
 
-        %{socket: socket, ref: ref} ->
-          do_down(ref, socket)
-          %{state | socket: nil}
+        %{server: server, adapter: adapter} ->
+          do_down(server, adapter)
+          %{state | server: nil}
       end
 
     result =
@@ -338,25 +339,22 @@ defmodule Bypass.Instance do
 
   defp match_route(_, _), do: {false, nil}
 
-  defp do_up(port, ref) do
+  defp do_up(port, adapter) do
     plug_opts = [bypass_instance: self()]
-    {:ok, socket} = :ranch_tcp.listen(so_reuseport() ++ [ip: listen_ip(), port: port])
-    cowboy_opts = cowboy_opts(port, ref, socket)
-    {:ok, _pid} = Plug.Cowboy.http(Bypass.Plug, plug_opts, cowboy_opts)
-    socket
+
+    opts = [
+      ref: make_ref(),
+      listen_ip: listen_ip(),
+      num_acceptors: 5,
+      reuseport_raw: so_reuseport()
+    ]
+
+    {:ok, server} = adapter.start(Bypass.Plug, plug_opts, port, opts)
+    server
   end
 
-  defp do_down(ref, socket) do
-    :ok = Plug.Cowboy.shutdown(ref)
-
-    # `port_close` is synchronous, so after it has returned we _know_ that the socket has been
-    # closed. If we'd rely on ranch's supervisor shutting down the acceptor processes and thereby
-    # killing the socket we would run into race conditions where the socket port hasn't yet gotten
-    # the EXIT signal and would still be open, thereby breaking tests that rely on a closed socket.
-    case :erlang.port_info(socket, :name) do
-      :undefined -> :ok
-      _ -> :erlang.port_close(socket)
-    end
+  defp do_down(server, adapter) do
+    :ok = adapter.stop(server)
   end
 
   defp retain_plug_process({method, path} = route, {caller_pid, _}, state) do
@@ -388,16 +386,16 @@ defmodule Bypass.Instance do
          %{
            callers_awaiting_down: down_callers,
            callers_awaiting_exit: exit_callers,
-           socket: socket,
-           ref: ref
+           server: server,
+           adapter: adapter
          } = state
        ) do
     if retained_plugs_count(state) == 0 do
       down_reset =
         if length(down_callers) > 0 do
-          do_down(ref, socket)
+          do_down(server, adapter)
           Enum.each(down_callers, &GenServer.reply(&1, :ok))
-          %{state | socket: nil, callers_awaiting_down: []}
+          %{state | server: nil, callers_awaiting_down: []}
         end
 
       if length(exit_callers) > 0 do
@@ -436,41 +434,6 @@ defmodule Bypass.Instance do
 
   defp new_route(fun, path, expected) do
     new_route(fun, build_path_match(path) |> elem(1), expected)
-  end
-
-  defp cowboy_opts(port, ref, socket) do
-    [ref: ref, port: port, transport_options: [num_acceptors: 5, socket: socket]]
-  end
-
-  # Use raw socket options to set SO_REUSEPORT so we fix {:error, :eaddrinuse} - where the OS errors
-  # when we attempt to listen on the same port as before, since it's still considered in use.
-  #
-  # See https://lwn.net/Articles/542629/ for details on SO_REUSEPORT.
-  #
-  # See https://github.com/aetrion/erl-dns/blob/0c8d768/src/erldns_server_sup.erl#L81 for an
-  # Erlang library using this approach.
-  #
-  # We want to do this:
-  #
-  #     int optval = 1;
-  #     setsockopt(sfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
-  #
-  # Use the following C program to find the values on each OS:
-  #
-  #     #include <stdio.h>
-  #     #include <sys/socket.h>
-  #
-  #     int main() {
-  #         printf("SOL_SOCKET: %d\n", SOL_SOCKET);
-  #         printf("SO_REUSEPORT: %d\n", SO_REUSEPORT);
-  #         return 0;
-  #     }
-  defp so_reuseport() do
-    case :os.type() do
-      {:unix, :linux} -> [{:raw, 1, 15, <<1::32-native>>}]
-      {:unix, :darwin} -> [{:raw, 65_535, 512, <<1::32-native>>}]
-      _ -> []
-    end
   end
 
   # This is used to override the default behaviour of ranch_tcp

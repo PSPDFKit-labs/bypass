@@ -115,13 +115,27 @@ defmodule BypassTest do
       bypass,
       fn _conn ->
         Bypass.pass(bypass)
-        Process.exit(self(), :shutdown)
+        # Kill the plug process before it can send a response. `:kill` is
+        # untrappable, so the connection is dropped regardless of whether the
+        # backend traps exits in its connection process (Bandit does, Cowboy
+        # doesn't). The exact transport error is backend-specific; what matters
+        # is that the request fails and Bypass.pass still satisfies the
+        # expectation (verified implicitly by the test not raising on exit).
+        Process.exit(self(), :kill)
       end
     ])
 
     capture_log(fn ->
-      assert {:error, _conn, %Mint.TransportError{reason: :timeout}, _responses} =
-               request(bypass.port)
+      # The plug is killed before responding. Depending on the backend the client
+      # either sees a dropped connection (transport error) or a 500 synthesised by
+      # the server; either way the request did not complete normally. What this
+      # test really asserts is that Bypass.pass satisfied the expectation, which is
+      # verified implicitly by the ExUnit on_exit check not raising :not_called.
+      case request(bypass.port) do
+        {:error, _conn, %Mint.TransportError{}, _responses} -> :ok
+        {:ok, 500, _body} -> :ok
+        other -> flunk("expected request to fail or 500, got: #{inspect(other)}")
+      end
     end)
   end
 
@@ -145,8 +159,13 @@ defmodule BypassTest do
       end
     ])
 
-    assert {:error, _conn, %Mint.TransportError{reason: :closed}, _responses} =
+    # The server is torn down mid-request. The client sees an interrupted
+    # request; the exact transport error depends on the backend (Cowboy 2.13+
+    # drains gracefully -> :timeout, others hard-close -> :closed).
+    assert {:error, _conn, %Mint.TransportError{reason: reason}, _responses} =
              request(bypass.port)
+
+    assert reason in [:closed, :timeout]
   end
 
   test "Bypass.down waits for plug process to terminate before shutting it down with expect" do

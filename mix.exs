@@ -8,7 +8,7 @@ defmodule Bypass.Mixfile do
     [
       app: :bypass,
       version: @version,
-      elixir: "~> 1.7",
+      elixir: "~> 1.14",
       description: description(),
       package: package(),
       deps: deps(),
@@ -29,9 +29,9 @@ defmodule Bypass.Mixfile do
 
   defp deps do
     [
-      {:plug_cowboy, "~> 2.0"},
-      {:plug, "~> 1.7"},
-      {:ranch, "~> 1.7"},
+      {:bandit, "~> 1.5"},
+      {:plug_cowboy, "~> 2.0", optional: true},
+      {:plug, "~> 1.14"},
       {:ex_doc, "> 0.0.0", only: :dev},
       {:espec, "~> 1.6", only: [:dev, :test]},
       {:mint, "~> 1.1", only: :test},
