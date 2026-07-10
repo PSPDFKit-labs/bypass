@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v3.0.0
 
 * Switch the default HTTP server backend from Cowboy to
   [Bandit](https://hex.pm/packages/bandit).
@@ -10,7 +10,18 @@
 * `:plug_cowboy` is now an optional dependency. To keep using Cowboy, add
   `{:plug_cowboy, "~> 2.0"}` to your deps and set
   `config :bypass, adapter: Bypass.Adapter.Cowboy`.
-* Require at least Elixir 1.14 and OTP 25 (Bandit / the `reuseport` inet option).
+* Require at least Elixir 1.15 and OTP 25 (Bandit / the `reuseport` inet option).
+
+### Potentially breaking behavior changes
+
+The transport-level outcome of an interrupted request now depends on the
+backend. Tests that assert on a specific `Mint.TransportError` reason (or similar
+low-level client error) may need updating:
+
+* A plug that exits/crashes before responding: the client sees a dropped
+  connection under Bandit, versus a `500` under recent Cowboy.
+* `Bypass.down/1` while a request is in flight: the client sees `:closed` on
+  hard-closing backends or `:timeout` on Cowboy 2.13+ (which drains gracefully).
 
 ## v2.1.0 - 13 Nov 2020
 

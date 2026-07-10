@@ -11,71 +11,40 @@ permissions:
 
 jobs:
   build:
-    name: Test - ${{matrix.adapter}} - Erlang ${{matrix.otp}} / Elixir ${{matrix.elixir}}
-    runs-on:  ${{matrix.os}}
+    name: Test - ${{matrix.adapter}} - Erlang ${{matrix.elixir_otp.otp}} / Elixir ${{matrix.elixir_otp.elixir}}
+    runs-on:  ${{matrix.elixir_otp.os}}
     strategy:
       fail-fast: false
       matrix:
-        # Bandit is the default adapter and requires Elixir 1.14+ and OTP 25+
+        # Bandit is the default adapter and requires Elixir 1.15+ and OTP 25+
         # (the `reuseport` inet option). The Cowboy adapter is exercised via the
         # optional :plug_cowboy dependency and the BYPASS_ADAPTER env var.
+        # Each combination is enumerated explicitly: an `include`-only matrix
+        # combined with a real axis does not expand the way you'd expect.
         # https://hexdocs.pm/elixir/compatibility-and-deprecations.html#compatibility-between-elixir-and-erlang-otp
         adapter: ["bandit", "cowboy"]
-        include:
-          # Elixir 1.14: 25
-          - elixir: "1.14"
-            otp: "25.3"
-            os: "ubuntu-22.04"
-
-          - elixir: "1.14"
-            otp: "26.2"
-            os: "ubuntu-22.04"
-
-          # Elixir 1.15: 25-26
-          - elixir: "1.15"
-            otp: "25.3"
-            os: "ubuntu-22.04"
-
-          - elixir: "1.15"
-            otp: "26.2"
-            os: "ubuntu-22.04"
-
-          # Elixir 1.16: 25-26
-          - elixir: "1.16"
-            otp: "25.3"
-            os: "ubuntu-22.04"
-
-          - elixir: "1.16"
-            otp: "26.2"
-            os: "ubuntu-22.04"
-
-          # Elixir 1.17: 25-27
-          - elixir: "1.17"
-            otp: "26.2"
-            os: "ubuntu-22.04"
-
-          - elixir: "1.17"
-            otp: "27.2"
-            os: "ubuntu-24.04"
-
-          # Elixir 1.18: 25-27
-          - elixir: "1.18"
-            otp: "27.2"
-            os: "ubuntu-24.04"
+        elixir_otp:
+          - { elixir: "1.15", otp: "25.3", os: "ubuntu-22.04" }
+          - { elixir: "1.15", otp: "26.2", os: "ubuntu-22.04" }
+          - { elixir: "1.16", otp: "25.3", os: "ubuntu-22.04" }
+          - { elixir: "1.16", otp: "26.2", os: "ubuntu-22.04" }
+          - { elixir: "1.17", otp: "26.2", os: "ubuntu-22.04" }
+          - { elixir: "1.17", otp: "27.2", os: "ubuntu-24.04" }
+          - { elixir: "1.18", otp: "27.2", os: "ubuntu-24.04" }
 
     steps:
     - uses: actions/checkout@v4
     - name: Set up Elixir
       uses: erlef/setup-beam@ae6e9db1bf49000a27750a9e283cf4069da9d171
       with:
-        otp-version: ${{matrix.otp}}
-        elixir-version: ${{matrix.elixir}}
+        otp-version: ${{matrix.elixir_otp.otp}}
+        elixir-version: ${{matrix.elixir_otp.elixir}}
     - name: Restore dependencies cache
       uses: actions/cache@v4
       with:
         path: deps
-        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-        restore-keys: ${{ runner.os }}-mix-
+        key: ${{ runner.os }}-mix-${{ matrix.elixir_otp.elixir }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-${{ matrix.elixir_otp.elixir }}-
     - name: Install dependencies
       run: mix deps.get
     - name: Run tests

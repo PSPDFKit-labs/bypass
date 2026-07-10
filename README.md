@@ -16,7 +16,7 @@ requests. This is most useful in tests, when you want to create a mock HTTP
 server and test how your HTTP client handles different types of responses from
 the server.
 
-Bypass supports Elixir 1.14 and OTP 25 and up. By default it runs on
+Bypass supports Elixir 1.15 and OTP 25 and up. By default it runs on
 [Bandit](https://hex.pm/packages/bandit); [Cowboy](https://hex.pm/packages/plug_cowboy)
 is available as an opt-in adapter.
 

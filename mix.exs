@@ -1,14 +1,14 @@
 defmodule Bypass.Mixfile do
   use Mix.Project
 
-  @version "2.1.0"
+  @version "3.0.0"
   @source_url "https://github.com/PSPDFKit-labs/bypass"
 
   def project do
     [
       app: :bypass,
       version: @version,
-      elixir: "~> 1.14",
+      elixir: "~> 1.15",
       description: description(),
       package: package(),
       deps: deps(),

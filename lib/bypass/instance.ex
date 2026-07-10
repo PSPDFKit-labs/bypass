@@ -27,7 +27,9 @@ defmodule Bypass.Instance do
     adapter = Application.get_env(:bypass, :adapter, Bypass.Adapter.Bandit)
 
     # Get a free port from the OS
-    case :gen_tcp.listen(Keyword.get(opts, :port, 0), so_reuseport() ++ [ip: listen_ip()]) do
+    probe_opts = so_reuseport() ++ [ip: listen_ip(), reuseaddr: true]
+
+    case :gen_tcp.listen(Keyword.get(opts, :port, 0), probe_opts) do
       {:ok, socket} ->
         {:ok, port} = :inet.port(socket)
         :erlang.port_close(socket)
@@ -436,9 +438,9 @@ defmodule Bypass.Instance do
     new_route(fun, build_path_match(path) |> elem(1), expected)
   end
 
-  # This is used to override the default behaviour of ranch_tcp
-  # and limit the range of interfaces it will listen on to just
-  # the configured interface. Loopback is a default interface.
+  # Limits the range of interfaces the listen socket will bind to, to just the
+  # configured interface. Loopback is the default. Passed through to the adapter
+  # (and the free-port probe) as the `:ip` option.
   defp listen_ip do
     case Application.get_env(:bypass, :listen_ip, {127, 0, 0, 1}) do
       listen_ip when is_tuple(listen_ip) ->
