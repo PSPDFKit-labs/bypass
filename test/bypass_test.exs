@@ -500,6 +500,42 @@ defmodule BypassTest do
     end)
   end
 
+  test "on_exit deferred while a request is in-flight replies and stops the instance cleanly" do
+    bypass = Bypass.open()
+    test = self()
+    ref = Process.monitor(bypass.pid)
+
+    # Neutralise Bypass' automatic on_exit; this test drives :on_exit itself.
+    ExUnit.Callbacks.on_exit({Bypass, bypass.pid}, fn -> :ok end)
+
+    Bypass.expect(bypass, fn conn ->
+      send(test, {:plug, self()})
+
+      receive do
+        :proceed -> :ok
+      end
+
+      Plug.Conn.send_resp(conn, 200, "")
+    end)
+
+    req_task = Task.async(fn -> request(bypass.port) end)
+    assert_receive {:plug, plug_pid}, 1_000
+
+    # The plug is still retained, so :on_exit is deferred until it finishes.
+    exit_task = Task.async(fn -> Bypass.Instance.call(bypass.pid, :on_exit) end)
+    Process.sleep(50)
+
+    # Letting the plug finish triggers the deferred-exit dispatch path.
+    send(plug_pid, :proceed)
+
+    assert Task.await(exit_task) == :ok
+    assert {:ok, 200, ""} = Task.await(req_task)
+
+    # The instance must stop normally, not crash (which would restart it under
+    # its :transient policy) or double-stop the server.
+    assert_receive {:DOWN, ^ref, :process, _pid, :normal}, 1_000
+  end
+
   @doc ~S"""
   Open a new HTTP connection and perform the request. We don't want to use httpc, hackney or another
   "high-level" HTTP client, since they do connection pooling and we will sometimes get a connection

@@ -35,6 +35,9 @@ instead, add the optional dependency and select the adapter:
 config :bypass, adapter: Bypass.Adapter.Cowboy
 ```
 
+To run Bypass's own test suite against a specific backend, set `BYPASS_ADAPTER`
+(`bandit` or `cowboy`), or run both at once with `mix test.adapters`.
+
 ## Usage
 
 To use Bypass in a test case, open a connection and use its port to connect your

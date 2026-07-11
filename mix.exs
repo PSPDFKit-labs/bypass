@@ -12,11 +12,35 @@ defmodule Bypass.Mixfile do
       description: description(),
       package: package(),
       deps: deps(),
+      aliases: aliases(),
       docs: docs(),
       dialyzer: [
         plt_add_apps: [:ex_unit]
       ]
     ]
+  end
+
+  defp aliases do
+    # `mix test.adapters` runs the suite against both HTTP backends, each in a
+    # fresh VM. Extra args are forwarded, e.g. `mix test.adapters --seed 0`.
+    ["test.adapters": &test_adapters/1]
+  end
+
+  defp test_adapters(args) do
+    statuses =
+      for adapter <- ~w(bandit cowboy) do
+        IO.puts(IO.ANSI.format([:cyan, "\n==> mix test with BYPASS_ADAPTER=#{adapter}\n"]))
+
+        {_, status} =
+          System.cmd("mix", ["test" | args],
+            env: [{"BYPASS_ADAPTER", adapter}],
+            into: IO.stream(:stdio, :line)
+          )
+
+        status
+      end
+
+    if Enum.any?(statuses, &(&1 != 0)), do: exit({:shutdown, 1})
   end
 
   def application do
@@ -31,6 +55,11 @@ defmodule Bypass.Mixfile do
     [
       {:bandit, "~> 1.5"},
       {:plug_cowboy, "~> 2.0", optional: true},
+      # Pinned to ranch 1.x: the Cowboy adapter hands ranch a pre-opened listen
+      # socket (for SO_REUSEPORT), an option ranch 2.x removed. A non-optional
+      # dep constrains a consumer's resolution, so pinning here keeps the Cowboy
+      # adapter working without every consumer needing an `override: true`.
+      {:ranch, "~> 1.8"},
       {:plug, "~> 1.14"},
       {:ex_doc, "> 0.0.0", only: :dev},
       {:espec, "~> 1.6", only: [:dev, :test]},

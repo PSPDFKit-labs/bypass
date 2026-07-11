@@ -62,12 +62,12 @@ defmodule Bypass.Instance do
 
       {route, state} ->
         result = {:exit, {:exit, reason, []}}
-        {:noreply, route |> put_result(ref, result, state) |> dispatch_awaiting_callers()}
+        route |> put_result(ref, result, state) |> dispatch_awaiting_callers()
     end
   end
 
   def handle_cast({:put_expect_result, route, ref, result}, state) do
-    {:noreply, route |> put_result(ref, result, state) |> dispatch_awaiting_callers()}
+    route |> put_result(ref, result, state) |> dispatch_awaiting_callers()
   end
 
   def handle_call(request, from, state) do
@@ -393,22 +393,26 @@ defmodule Bypass.Instance do
          } = state
        ) do
     if retained_plugs_count(state) == 0 do
-      down_reset =
+      state =
         if length(down_callers) > 0 do
           do_down(server, adapter)
           Enum.each(down_callers, &GenServer.reply(&1, :ok))
           %{state | server: nil, callers_awaiting_down: []}
+        else
+          state
         end
 
       if length(exit_callers) > 0 do
-        {result, _updated_state} = do_exit(state)
+        # Use the (possibly already torn-down) state so do_exit/1 does not stop
+        # the server a second time.
+        {result, updated_state} = do_exit(state)
         Enum.each(exit_callers, &GenServer.reply(&1, result))
-        GenServer.stop(:normal)
+        {:stop, :normal, updated_state}
+      else
+        {:noreply, state}
       end
-
-      down_reset || state
     else
-      state
+      {:noreply, state}
     end
   end
 

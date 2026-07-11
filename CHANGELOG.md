@@ -11,6 +11,8 @@
   `{:plug_cowboy, "~> 2.0"}` to your deps and set
   `config :bypass, adapter: Bypass.Adapter.Cowboy`.
 * Require at least Elixir 1.15 and OTP 25 (Bandit / the `reuseport` inet option).
+* Pin `ranch` to 1.x. The Cowboy adapter hands ranch a pre-opened listen socket
+  (for `SO_REUSEPORT`), which ranch 2.x no longer supports.
 
 ### Potentially breaking behavior changes
 
