@@ -16,7 +16,27 @@ requests. This is most useful in tests, when you want to create a mock HTTP
 server and test how your HTTP client handles different types of responses from
 the server.
 
-Bypass supports Elixir 1.10 and OTP 21 and up. It works with Cowboy 2.
+Bypass supports Elixir 1.15 and OTP 25 and up. By default it runs on
+[Bandit](https://hex.pm/packages/bandit); [Cowboy](https://hex.pm/packages/plug_cowboy)
+is available as an opt-in adapter.
+
+### HTTP server backend
+
+Bypass runs on Bandit out of the box — no configuration required. To use Cowboy
+instead, add the optional dependency and select the adapter:
+
+```elixir
+# mix.exs
+{:plug_cowboy, "~> 2.0", only: :test}
+```
+
+```elixir
+# config/test.exs
+config :bypass, adapter: Bypass.Adapter.Cowboy
+```
+
+To run Bypass's own test suite against a specific backend, set `BYPASS_ADAPTER`
+(`bandit` or `cowboy`), or run both at once with `mix test.adapters`.
 
 ## Usage
 
