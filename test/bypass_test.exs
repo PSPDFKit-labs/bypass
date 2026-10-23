@@ -120,8 +120,11 @@ defmodule BypassTest do
     ])
 
     capture_log(fn ->
-      assert {:error, _conn, %Mint.TransportError{reason: :timeout}, _responses} =
-               request(bypass.port)
+      # Cowboy 2.13+ answers 500 when the request process exits, older versions send nothing.
+      result = request(bypass.port)
+
+      assert match?({:ok, 500, _}, result) or
+               match?({:error, _conn, %Mint.TransportError{reason: :timeout}, _responses}, result)
     end)
   end
 
