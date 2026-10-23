@@ -25,7 +25,9 @@ defmodule Bypass.Instance do
 
   def init([opts]) do
     # Get a free port from the OS
-    case :ranch_tcp.listen(so_reuseport() ++ [ip: listen_ip(), port: Keyword.get(opts, :port, 0)]) do
+    socket_opts = so_reuseport() ++ [ip: listen_ip(), port: Keyword.get(opts, :port, 0)]
+
+    case :ranch_tcp.listen(%{socket_opts: socket_opts}) do
       {:ok, socket} ->
         {:ok, port} = :inet.port(socket)
         :erlang.port_close(socket)
@@ -340,10 +342,21 @@ defmodule Bypass.Instance do
 
   defp do_up(port, ref) do
     plug_opts = [bypass_instance: self()]
-    {:ok, socket} = :ranch_tcp.listen(so_reuseport() ++ [ip: listen_ip(), port: port])
-    cowboy_opts = cowboy_opts(port, ref, socket)
+    instance = self()
+
+    # Ranch can't be given a listen socket, so have it hand back the one it opens, so that
+    # `do_down/2` can close it synchronously.
+    post_listen_callback = fn socket ->
+      send(instance, {:listen_socket, ref, socket})
+      :ok
+    end
+
+    cowboy_opts = cowboy_opts(port, ref, post_listen_callback)
     {:ok, _pid} = Plug.Cowboy.http(Bypass.Plug, plug_opts, cowboy_opts)
-    socket
+
+    receive do
+      {:listen_socket, ^ref, socket} -> socket
+    end
   end
 
   defp do_down(ref, socket) do
@@ -441,11 +454,16 @@ defmodule Bypass.Instance do
   # `brutal_kill`: a plug calling `Bypass.down/1` blocks on this instance while the instance
   # waits for ranch to stop that plug's connection. With a graceful shutdown that cycle only
   # breaks when ranch's shutdown timeout (5s) expires.
-  defp cowboy_opts(port, ref, socket) do
+  defp cowboy_opts(port, ref, post_listen_callback) do
     [
       ref: ref,
       port: port,
-      transport_options: [num_acceptors: 5, shutdown: :brutal_kill, socket: socket]
+      transport_options: [
+        num_acceptors: 5,
+        shutdown: :brutal_kill,
+        socket_opts: so_reuseport() ++ [ip: listen_ip()],
+        post_listen_callback: post_listen_callback
+      ]
     ]
   end
 
