@@ -22,26 +22,10 @@ jobs:
         include:
           # Elixir 1.12: 22-24
           - elixir: "1.12"
-            otp: "22.3"
-            os: "ubuntu-20.04"
-
-          - elixir: "1.12"
-            otp: "23.3"
-            os: "ubuntu-20.04"
-
-          - elixir: "1.12"
             otp: "24.3"
             os: "ubuntu-22.04"
 
           # Elixir 1.13: 22-24
-          - elixir: "1.13.4"
-            otp: "22.3"
-            os: "ubuntu-20.04"
-
-          - elixir: "1.13.4"
-            otp: "23.3"
-            os: "ubuntu-20.04"
-
           - elixir: "1.13.4"
             otp: "24.3"
             os: "ubuntu-22.04"
@@ -51,10 +35,6 @@ jobs:
             os: "ubuntu-22.04"
 
           # Elixir 1.14: 23-25 (and 26 from v1.14.5)
-          - elixir: "1.14"
-            otp: "23.3"
-            os: "ubuntu-20.04"
-
           - elixir: "1.14"
             otp: "24.3"
             os: "ubuntu-22.04"
